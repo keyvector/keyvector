@@ -108,4 +108,6 @@ credentials
 ehthumbs.db
 Thumbs.db 
 .python-version
-infrastructure-deploy/__pycache__/cdc_stack.cpython-313.pyc
+
+# Local configs may name real accounts and tables
+keyvector.conf

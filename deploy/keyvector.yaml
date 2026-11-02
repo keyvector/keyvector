@@ -1,0 +1,365 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Keyvector: keeps an Amazon S3 Vectors index in sync with an Amazon Keyspaces table, in your
+  own account. Runs on ECS Fargate, optionally with a self-hosted Sentence-Transformers model
+  (Hugging Face text-embeddings-inference) in the same task.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label: {default: Source table}
+        Parameters: [KeyspaceName, TableName, TextColumns, MetadataColumns, StoreTextAs]
+      - Label: {default: Embeddings}
+        Parameters: [Embedder, EmbedderModel, Dimensions, TeiImage, EmbedderUrl, ApiKeySecretArn]
+      - Label: {default: Vector index}
+        Parameters: [CreateVectorBucket, VectorBucketName, CreateVectorIndex, VectorIndexName, DistanceMetric]
+      - Label: {default: Runtime}
+        Parameters: [Image, VpcId, SubnetIds, AssignPublicIp, DesiredCount, Cpu, Memory]
+
+Parameters:
+  KeyspaceName:
+    Type: String
+  TableName:
+    Type: String
+    Description: Must have CDC enabled (ALTER TABLE ... WITH cdc = true), new and old images.
+  TextColumns:
+    Type: String
+    Description: Comma-separated columns embedded as each row's text, e.g. title,overview
+  MetadataColumns:
+    Type: String
+    Default: ''
+    Description: Comma-separated columns stored with each vector for filtering. Optional.
+  StoreTextAs:
+    Type: String
+    Default: ''
+    Description: Also store the embedded text under this metadata key (made non-filterable). Optional.
+
+  Embedder:
+    Type: String
+    Default: tei
+    AllowedValues: [tei, bedrock, openai]
+    Description: tei runs your own Sentence-Transformers model in the task; bedrock and openai call an API.
+  EmbedderModel:
+    Type: String
+    Default: sentence-transformers/all-MiniLM-L6-v2
+    Description: >-
+      tei - a Hugging Face model id; bedrock - e.g. amazon.titan-embed-text-v2:0;
+      openai - e.g. text-embedding-3-small.
+  Dimensions:
+    Type: Number
+    Default: 384
+    MinValue: 1
+    MaxValue: 4096
+    Description: The model's output size. all-MiniLM-L6-v2 is 384, bge-large-en-v1.5 1024, Titan v2 256/512/1024.
+  TeiImage:
+    Type: String
+    Default: ghcr.io/huggingface/text-embeddings-inference:cpu-1.8
+    Description: Only used when Embedder is tei. Pin a version.
+  EmbedderUrl:
+    Type: String
+    Default: ''
+    Description: openai only - an OpenAI-compatible base URL. Empty means api.openai.com.
+  ApiKeySecretArn:
+    Type: String
+    Default: ''
+    Description: openai only - Secrets Manager secret holding the API key. Empty for a keyless server.
+
+  CreateVectorBucket:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+  VectorBucketName:
+    Type: String
+    AllowedPattern: '[a-z0-9-]{3,63}'
+  CreateVectorIndex:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+  VectorIndexName:
+    Type: String
+    AllowedPattern: '[a-z0-9.-]{3,63}'
+  DistanceMetric:
+    Type: String
+    Default: cosine
+    AllowedValues: [cosine, euclidean]
+
+  Image:
+    Type: String
+    Description: The Keyvector image URI, e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com/keyvector:0.1.0
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: >-
+      Subnets with a route to AWS APIs (NAT or VPC endpoints). With tei, the model is downloaded
+      from huggingface.co at start, so they also need a route to the internet.
+  AssignPublicIp:
+    Type: String
+    Default: DISABLED
+    AllowedValues: [DISABLED, ENABLED]
+  DesiredCount:
+    Type: Number
+    Default: 1
+    Description: Workers share the stream's shards; more than the shard count adds nothing.
+  Cpu:
+    Type: Number
+    Default: 2048
+    AllowedValues: [512, 1024, 2048, 4096, 8192]
+  Memory:
+    Type: Number
+    Default: 4096
+    Description: MiB. With tei, leave room for the model.
+
+Conditions:
+  UseTei: !Equals [!Ref Embedder, tei]
+  UseBedrock: !Equals [!Ref Embedder, bedrock]
+  UseApiKey: !And [!Equals [!Ref Embedder, openai], !Not [!Equals [!Ref ApiKeySecretArn, '']]]
+  MakeBucket: !Equals [!Ref CreateVectorBucket, 'true']
+  MakeIndex: !Equals [!Ref CreateVectorIndex, 'true']
+  HasTextKey: !Not [!Equals [!Ref StoreTextAs, '']]
+
+Resources:
+  VectorBucket:
+    Type: AWS::S3Vectors::VectorBucket
+    Condition: MakeBucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      VectorBucketName: !Ref VectorBucketName
+
+  VectorIndex:
+    Type: AWS::S3Vectors::Index
+    Condition: MakeIndex
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      VectorBucketArn: !If
+        - MakeBucket
+        - !GetAtt VectorBucket.VectorBucketArn
+        - !Sub arn:${AWS::Partition}:s3vectors:${AWS::Region}:${AWS::AccountId}:bucket/${VectorBucketName}
+      IndexName: !Ref VectorIndexName
+      DataType: float32
+      Dimension: !Ref Dimensions
+      DistanceMetric: !Ref DistanceMetric
+      MetadataConfiguration: !If
+        - HasTextKey
+        - NonFilterableMetadataKeys: [!Ref StoreTextAs]
+        - !Ref AWS::NoValue
+
+  DeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /keyvector/${AWS::StackName}
+      RetentionInDays: 30
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Keyvector tasks - outbound only
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ecs-tasks.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies: !If
+        - UseApiKey
+        - - PolicyName: read-api-key
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action: secretsmanager:GetSecretValue
+                  Resource: !Ref ApiKeySecretArn
+        - !Ref AWS::NoValue
+
+  # Everything the connector does, and nothing else: read one table and its stream, keep its
+  # own lease tables, write one vector index, use its own dead-letter queue.
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ecs-tasks.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: keyvector
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadTheStream
+                Effect: Allow
+                Action: [cassandra:GetStream, cassandra:GetShardIterator, cassandra:GetRecords]
+                Resource: !Sub arn:${AWS::Partition}:cassandra:${AWS::Region}:${AWS::AccountId}:/keyspace/${KeyspaceName}/table/${TableName}/stream/*
+              - Sid: FindTheStream
+                Effect: Allow
+                Action: [cassandra:ListStreams]
+                Resource: '*'
+              - Sid: ReadTheTable
+                Effect: Allow
+                Action: [cassandra:Select]
+                Resource:
+                  - !Sub arn:${AWS::Partition}:cassandra:${AWS::Region}:${AWS::AccountId}:/keyspace/${KeyspaceName}/table/${TableName}
+                  - !Sub arn:${AWS::Partition}:cassandra:${AWS::Region}:${AWS::AccountId}:/keyspace/system*
+              - Sid: LeaseTables
+                Effect: Allow
+                Action:
+                  - dynamodb:CreateTable
+                  - dynamodb:DescribeTable
+                  - dynamodb:UpdateTable
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AWS::StackName}-lease-table
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AWS::StackName}-lease-table/index/*
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AWS::StackName}-lease-table-*
+              - Sid: VectorIndex
+                Effect: Allow
+                Action: [s3vectors:PutVectors, s3vectors:DeleteVectors, s3vectors:GetVectors, s3vectors:QueryVectors, s3vectors:GetIndex]
+                Resource: !Sub arn:${AWS::Partition}:s3vectors:${AWS::Region}:${AWS::AccountId}:bucket/${VectorBucketName}/index/${VectorIndexName}
+              - Sid: DeadLetters
+                Effect: Allow
+                Action: [sqs:SendMessage, sqs:ReceiveMessage, sqs:DeleteMessage]
+                Resource: !GetAtt DeadLetterQueue.Arn
+              - Sid: Metrics
+                Effect: Allow
+                Action: cloudwatch:PutMetricData
+                Resource: '*'
+              - !If
+                - UseBedrock
+                - Sid: Embeddings
+                  Effect: Allow
+                  Action: bedrock:InvokeModel
+                  Resource: !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/${EmbedderModel}
+                - !Ref AWS::NoValue
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${AWS::StackName}
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX
+      Cpu: !Ref Cpu
+      Memory: !Ref Memory
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: keyvector
+          Image: !Ref Image
+          Essential: true
+          Command: [run]
+          HealthCheck:
+            Command: [CMD-SHELL, 'curl -sf http://localhost:8081/health || exit 1']
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 120
+          Environment:
+            - {Name: STREAM_KEYSPACE_NAME, Value: !Ref KeyspaceName}
+            - {Name: STREAM_TABLE_NAME, Value: !Ref TableName}
+            # Also names the lease tables, which the task role is scoped to.
+            - {Name: STREAM_APPLICATION_NAME, Value: !Ref AWS::StackName}
+            - {Name: SYNC_TEXT_COLUMNS, Value: !Ref TextColumns}
+            - {Name: SYNC_METADATA_COLUMNS, Value: !Ref MetadataColumns}
+            - {Name: SYNC_STORE_TEXT_AS, Value: !Ref StoreTextAs}
+            - {Name: EMBEDDER_TYPE, Value: !Ref Embedder}
+            - {Name: EMBEDDER_MODEL, Value: !Ref EmbedderModel}
+            - {Name: EMBEDDER_DIMENSIONS, Value: !Ref Dimensions}
+            - Name: EMBEDDER_URL
+              Value: !If [UseTei, 'http://localhost:8080', !Ref EmbedderUrl]
+            - Name: EMBEDDER_API_KEY_ENV
+              Value: !If [UseApiKey, EMBEDDER_API_KEY, '']
+            - {Name: SINK_VECTOR_BUCKET, Value: !Ref VectorBucketName}
+            - {Name: SINK_VECTOR_INDEX, Value: !Ref VectorIndexName}
+            - {Name: PROCESSOR_DEAD_LETTER_QUEUE_URL, Value: !Ref DeadLetterQueue}
+          Secrets: !If
+            - UseApiKey
+            - - {Name: EMBEDDER_API_KEY, ValueFrom: !Ref ApiKeySecretArn}
+            - !Ref AWS::NoValue
+          DependsOn: !If
+            - UseTei
+            - - {ContainerName: embeddings, Condition: START}
+            - !Ref AWS::NoValue
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: keyvector
+        - !If
+          - UseTei
+          - Name: embeddings
+            Image: !Ref TeiImage
+            # Not essential: a one-off backfill or query task stops when keyvector exits.
+            Essential: false
+            Command: [--model-id, !Ref EmbedderModel, --port, '8080']
+            Environment:
+              - {Name: HF_HUB_DISABLE_TELEMETRY, Value: '1'}
+            LogConfiguration:
+              LogDriver: awslogs
+              Options:
+                awslogs-group: !Ref LogGroup
+                awslogs-region: !Ref AWS::Region
+                awslogs-stream-prefix: embeddings
+          - !Ref AWS::NoValue
+
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub ${AWS::StackName}
+
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: [TaskRole]
+    Properties:
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref DesiredCount
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: !Ref AssignPublicIp
+          SecurityGroups: [!Ref SecurityGroup]
+          Subnets: !Ref SubnetIds
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker: {Enable: true, Rollback: true}
+
+Outputs:
+  Cluster:
+    Value: !Ref Cluster
+  TaskDefinition:
+    Value: !Ref TaskDefinition
+    Description: Run backfill, redrive or query as a one-off task with a command override.
+  SecurityGroup:
+    Value: !Ref SecurityGroup
+  DeadLetterQueueUrl:
+    Value: !Ref DeadLetterQueue
+  LogGroup:
+    Value: !Ref LogGroup

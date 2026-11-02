@@ -5,26 +5,29 @@
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>software.amazon.ssa</groupId>
-    <artifactId>kcl-keyspaces-parent</artifactId>
-    <version>1.0.0</version>
+    <groupId>dev.keyvector</groupId>
+    <artifactId>keyvector-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>KCL Keyspaces Parent</name>
-    <description>Parent project for KCL Keyspaces connector and examples</description>
+    <name>Keyvector</name>
+    <description>Keeps a vector index in sync with Amazon Keyspaces tables, using Keyspaces CDC streams.</description>
+    <url>https://github.com/yogeshnath/keyvector</url>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
 
     <modules>
-        <module>kcl-keyspaces-core</module>
-        <module>kcl-keyspaces-app</module>
-        <module>s3-bucket-connector</module>
-        <module>s3-vector-connector</module>
-        <module>keyspaces-materialized-view-connector</module>
-        <module>sqs-connector</module>
+        <module>keyvector-core</module>
+        <module>keyvector-connector</module>
+        <module>keyvector-app</module>
     </modules>
 
     <properties>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kcl.version>3.1.2</kcl.version>
         <aws.sdk.version>2.33.0</aws.sdk.version>
@@ -52,8 +55,7 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.11.0</version>
                     <configuration>
-                        <source>11</source>
-                        <target>11</target>
+                        <release>17</release>
                     </configuration>
                 </plugin>
 
@@ -62,8 +64,8 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.1.2</version>
                     <configuration>
-                        <argLine>-Dnet.bytebuddy.experimental=true</argLine>
-                        <argLine>--add-opens=java.base/java.nio=ALL-UNNAMED</argLine>
+                        <!-- One argLine: a second element replaces the first rather than adding to it. -->
+                        <argLine>-Dnet.bytebuddy.experimental=true --add-opens=java.base/java.nio=ALL-UNNAMED</argLine>
                     </configuration>
                 </plugin>
 

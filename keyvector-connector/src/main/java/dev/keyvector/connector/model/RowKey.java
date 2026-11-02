@@ -1,0 +1,74 @@
+package dev.keyvector.connector.model;
+
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.TreeMap;
+
+/**
+ * The vector key for a row: its primary key, written so that it can be read back.
+ *
+ * <p>Columns are sorted by name and written {@code name=value&name=value}, each part
+ * percent-encoded, so a value containing {@code &} or {@code =} cannot be mistaken for a
+ * separator. The same row always gets the same key, and a query hit can be turned back
+ * into a {@code WHERE} clause without storing anything else.
+ */
+public final class RowKey {
+
+    /** S3 Vectors' limit on a vector key. */
+    public static final int MAX_LENGTH = 1024;
+
+    private RowKey() {
+    }
+
+    public static String encode(Map<String, Object> keyColumns) {
+        if (keyColumns == null || keyColumns.isEmpty()) {
+            throw new IllegalArgumentException("A row key needs at least one primary key column");
+        }
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, Object> e : new TreeMap<>(keyColumns).entrySet()) {
+            if (e.getValue() == null) {
+                throw new IllegalArgumentException("Primary key column " + e.getKey() + " is null");
+            }
+            if (sb.length() > 0) {
+                sb.append('&');
+            }
+            sb.append(enc(e.getKey())).append('=').append(enc(Values.keyText(e.getValue())));
+        }
+        if (sb.length() > MAX_LENGTH) {
+            throw new KeyTooLongException(sb.length());
+        }
+        return sb.toString();
+    }
+
+    /** Column name to the value's key text, in the encoded order. */
+    public static Map<String, String> decode(String key) {
+        Map<String, String> out = new LinkedHashMap<>();
+        for (String part : key.split("&", -1)) {
+            int eq = part.indexOf('=');
+            if (eq <= 0) {
+                throw new IllegalArgumentException("Not a Keyvector row key: " + key);
+            }
+            out.put(dec(part.substring(0, eq)), dec(part.substring(eq + 1)));
+        }
+        return out;
+    }
+
+    private static String enc(String s) {
+        return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", "%20");
+    }
+
+    private static String dec(String s) {
+        return URLDecoder.decode(s, StandardCharsets.UTF_8);
+    }
+
+    public static final class KeyTooLongException extends IllegalArgumentException {
+        private static final long serialVersionUID = 1L;
+
+        KeyTooLongException(int length) {
+            super("Row key is " + length + " characters; S3 Vectors allows " + MAX_LENGTH);
+        }
+    }
+}

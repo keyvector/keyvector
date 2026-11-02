@@ -1,0 +1,13 @@
+Keyvector
+Copyright 2026 Yogesh Sharma
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It began as a fork of aws-samples/sample-keyspaces-cdc-streams-connectors
+(https://github.com/aws-samples/sample-keyspaces-cdc-streams-connectors),
+Copyright Amazon.com, Inc. or its affiliates, licensed under the MIT No Attribution
+License (see LICENSE-upstream-MIT-0). The KCL scheduler, the configuration loader, the
+JEXL filter and the record converters under keyvector-core come from that project.
+
+Keyvector is not affiliated with or endorsed by Amazon Web Services. Amazon Keyspaces,
+Amazon S3 Vectors and Amazon Bedrock are trademarks of Amazon.com, Inc. or its affiliates.
