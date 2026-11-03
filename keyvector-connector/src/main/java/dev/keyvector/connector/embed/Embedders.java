@@ -7,7 +7,10 @@ public final class Embedders {
     private Embedders() {
     }
 
-    /** Titan Text Embeddings V2's on-demand quota: 60 requests a minute, not adjustable. */
+    /**
+     * Titan Text Embeddings V2's on-demand quota on a new account: 60 requests a minute. Accounts
+     * with more history get more; raise it with embedder.requests-per-minute.
+     */
     static final int TITAN_DEFAULT_RPM = 60;
 
     public static Embedder create(Settings s) {

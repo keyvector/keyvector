@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Keyvector example - semantic search over arXiv abstracts in Amazon Keyspaces. A table with CDC on, and an S3 vector index for Titan V2 (1,024 dimensions).
+
+Resources:
+  Keyspace:
+    Type: AWS::Cassandra::Keyspace
+    Properties:
+      KeyspaceName: research
+      Tags:
+        - {Key: created_by, Value: keyspaces-skill}
+        - {Key: generation_model, Value: claude-opus-5-5}
+        - {Key: project, Value: keyvector-example}
+
+  Papers:
+    Type: AWS::Cassandra::Table
+    Properties:
+      KeyspaceName: !Ref Keyspace
+      TableName: papers
+      PartitionKeyColumns:
+        - {ColumnName: paper_id, ColumnType: text}
+      RegularColumns:
+        - {ColumnName: title, ColumnType: text}
+        - {ColumnName: abstract, ColumnType: text}
+        - {ColumnName: authors, ColumnType: text}
+        - {ColumnName: category, ColumnType: text}
+      BillingMode:
+        Mode: ON_DEMAND
+      CdcSpecification:
+        Status: ENABLED
+        ViewType: NEW_AND_OLD_IMAGES
+      Tags:
+        - {Key: created_by, Value: keyspaces-skill}
+        - {Key: generation_model, Value: claude-opus-5-5}
+        - {Key: project, Value: keyvector-example}
+
+  VectorBucket:
+    Type: AWS::S3Vectors::VectorBucket
+    Properties:
+      VectorBucketName: !Sub keyvector-papers-${AWS::AccountId}
+
+  PapersIndex:
+    Type: AWS::S3Vectors::Index
+    Properties:
+      VectorBucketArn: !GetAtt VectorBucket.VectorBucketArn
+      IndexName: papers
+      DataType: float32
+      Dimension: 1024
+      DistanceMetric: cosine
+
+Outputs:
+  VectorBucket:
+    Value: !Sub keyvector-papers-${AWS::AccountId}

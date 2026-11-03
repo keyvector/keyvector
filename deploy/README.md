@@ -68,8 +68,9 @@ Use `["redrive"]` to drain the dead-letter queue and `["check"]` to validate the
 
 - **First start**: KCL creates its lease tables and an index on them, and assigns no shard
   until the index is active: about 12 minutes the first time, immediate after that.
-- **Bedrock Titan V2** is limited to 60 requests (one row each) a minute per account, and
-  the quota is not adjustable; Keyvector paces itself to it. Use TEI or Cohere Embed when
+- **Bedrock Titan V2** embeds one row per request, and a new account may be allowed only 60
+  requests a minute (check yours in Service Quotas); Keyvector paces itself to 60 unless you
+  set `embedder.requests-per-minute`. Use TEI or Cohere Embed when
   rows change faster than that, or for a large backfill.
 
 - **Workers**: KCL spreads the stream's shards over the tasks. More tasks than shards add nothing.

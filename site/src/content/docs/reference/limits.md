@@ -24,7 +24,8 @@ text.
   longer is skipped and logged, not retried.
 - **Filterable metadata is at most 2 KB per vector.** Store long text with `sync.store-text-as`
   and make that key non-filterable.
-- **Titan Text Embeddings V2: 60 requests a minute**, one text each, not adjustable. See
+- **Titan Text Embeddings V2 on a new account: as few as 60 requests a minute**, one text
+  each. Check your quota in Service Quotas. See
   [Choose an embedding model](/guides/models/).
 - **First start takes about 12 minutes** while KCL prepares its lease table.
 - **One table per deployment.**

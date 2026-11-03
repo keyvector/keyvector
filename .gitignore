@@ -118,3 +118,4 @@ e2e/*.conf
 .venv/
 # Local agent notes: name the AWS account and its root email
 CLAUDE.md
+examples/*/logs/

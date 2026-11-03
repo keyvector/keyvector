@@ -161,8 +161,10 @@ settings that matter:
 - **Filterable metadata is at most 2 KB per vector** (S3 Vectors). Store long text with
   `sync.store-text-as`, which the template makes non-filterable.
 - **One table per deployment.** Run one stack per table.
-- **Titan Text Embeddings V2 allows 60 requests a minute, and AWS does not raise it.** Titan
-  takes one text per request, so it embeds one row a second, about 3,600 rows an hour.
+- **Titan Text Embeddings V2 can be slow on a new account.** Ours was allowed 60 requests a
+  minute; the quota page marks it not adjustable, though accounts with more history get more
+  (check yours in Service Quotas). Titan takes one text per request, so at 60 a minute it
+  embeds one row a second, about 3,600 rows an hour.
   Keyvector paces itself to that by default (`embedder.requests-per-minute`). For a large
   backfill or a busy table use TEI, Cohere Embed on Bedrock (96 texts per request) or
   Bedrock batch inference.

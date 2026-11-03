@@ -18,11 +18,12 @@ The sync logic held up: every one of 61 live changes was accounted for, a restar
 exactly the right place, and stopping the model server mid-run lost nothing. Here's what
 didn't hold up.
 
-## Titan V2 allows 60 requests a minute, and you can't raise it
+## Titan V2 allowed our new account 60 requests a minute
 
-On a new account, on-demand **Titan Text Embeddings V2 is limited to 60 requests a minute**,
-and Service Quotas lists that quota as not adjustable. Titan embeds one text per request,
-so that's one row per second. A 1M-row backfill through Titan would take about 11.5 days.
+On our new account, on-demand **Titan Text Embeddings V2 was limited to 60 requests a
+minute**, and Service Quotas listed that quota as not adjustable. (Accounts with more history
+evidently get more: AWS's own DynamoDB walkthrough embeds 1,000 papers in 2 to 4 minutes.)
+Titan embeds one text per request, so at 60 a minute that's one row per second. A 1M-row backfill through Titan would take about 11.5 days.
 
 That turned up our first bug: **the Bedrock embedder didn't retry throttling.** It decided what
 to retry by asking the SDK's `retryable()` and searching the error message for

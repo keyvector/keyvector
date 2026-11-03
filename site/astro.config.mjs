@@ -30,6 +30,7 @@ export default defineConfig({
 					label: 'Start here',
 					items: [
 						{ label: 'Why Keyvector', slug: 'start/why' },
+						{ label: 'Search options for Keyspaces', slug: 'start/options' },
 						{ label: 'Quick start', slug: 'start/quick-start' },
 						{ label: 'How it works', slug: 'start/how-it-works' },
 					],
@@ -37,6 +38,7 @@ export default defineConfig({
 				{
 					label: 'Guides',
 					items: [
+						{ label: 'Tutorial: search research papers', slug: 'guides/arxiv-tutorial' },
 						{ label: 'Deploy to your AWS account', slug: 'guides/deploy' },
 						{ label: 'Choose an embedding model', slug: 'guides/models' },
 						{ label: 'Backfill, resync and redrive', slug: 'guides/backfill' },

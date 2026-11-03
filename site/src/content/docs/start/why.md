@@ -40,8 +40,13 @@ Keyspaces can't do any of that on its own: it has no vector type and no vector i
   changes, and vectors live in S3 Vectors, priced for storage rather than always-on servers.
 - **Open source, Apache-2.0.**
 
+For a fuller comparison, including OpenSearch, see
+[Search options for Keyspaces](/start/options/).
+
 ## When it isn't the right fit
 
+- If keyword matching matters as much as meaning (exact phrases, blended keyword and semantic
+  ranking, facets), OpenSearch is the better tool.
 - If you're free to change databases, a database with built-in vector search is simpler than
   running two systems.
 - If you need search results to be transactionally consistent with writes: the index trails the

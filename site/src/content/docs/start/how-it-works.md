@@ -8,6 +8,20 @@ Keyvector is a fork of AWS's
 which reads a table's change stream with the Kinesis Client Library (KCL). Keyvector replaces the
 sample's vector connector with a sync engine built to keep an index correct.
 
+## Where the model fits
+
+The embedding model and Keyvector do different jobs.
+
+- **The model understands text.** A Sentence-Transformers model on Hugging Face TEI, or Titan
+  on Bedrock, turns text into a vector that captures its meaning. It does this for every
+  changed row, and for every question at query time.
+- **Keyvector is the pipeline around the model.** It notices which rows changed, sends their
+  text to the model, stores the vectors, keeps them in step with deletes and expiries, and at
+  query time embeds the question, searches the index and reads the matching rows back from
+  Keyspaces.
+
+You choose the model in the configuration. Keyvector works the same way whichever you pick.
+
 ## The write path
 
 1. **Read.** KCL spreads the stream's shards across workers, keeps each worker's position in a

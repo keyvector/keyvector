@@ -90,7 +90,7 @@ public final class BedrockEmbedder extends BatchingEmbedder {
      * version asked {@code SdkException.retryable()} and grepped the message for
      * "ThrottlingException": the SDK reports a throttle it has already retried as not
      * retryable, and the message says "Too many requests", so a throttle failed the batch
-     * at once. Titan Text Embeddings V2 allows 60 requests a minute and the quota cannot be
+     * at once. Titan Text Embeddings V2 allowed a new account 60 requests a minute, and the quota cannot be
      * raised, so this is the normal case, not an edge.
      */
     static boolean retryable(Exception e) {

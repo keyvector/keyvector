@@ -11,15 +11,19 @@ the model's output and the vector index's dimension; Keyvector checks this at st
 | What | Hugging Face text-embeddings-inference running any Sentence-Transformers model | Titan Text Embeddings V2, Cohere Embed | OpenAI or any server speaking its `/embeddings` API (vLLM, Infinity, Ollama) |
 | Where your text goes | Nowhere: it runs beside Keyvector | Bedrock, in your account | That API |
 | Per-token cost | None, you pay for the compute | Yes | Yes |
-| Throughput limit | Your hardware | **Titan V2: 60 requests a minute, one text each, not adjustable.** Cohere takes 96 texts per request | The provider's |
+| Throughput limit | Your hardware | **Titan V2: one text per request; a new account may get only 60 requests a minute.** Cohere takes 96 texts per request | The provider's |
 
 ## Titan V2's quota
 
-Measured on a new account in November 2026: on-demand Titan Text Embeddings V2 allows **60
-requests a minute**, and AWS marks the quota as not adjustable. Titan takes one text per
-request, so that's one row per second, about 3,600 rows an hour. Keyvector paces itself to it
-by default, so it doesn't spend its time being throttled. To go faster, set
-`embedder.requests-per-minute` only if your account's quota is higher.
+Titan Text Embeddings V2 takes one text per request, so its request quota is its row rate.
+**On a new account in November 2026 ours was 60 requests a minute**, one row a second, about
+3,600 rows an hour, and the Service Quotas page marked it as not adjustable. Accounts with
+more history get more: AWS's own DynamoDB walkthrough embedded 1,000 papers in 2 to 4
+minutes. Check yours under Service Quotas, "On-demand model inference requests per minute
+for Amazon Titan Text Embeddings V2".
+
+Keyvector paces itself to 60 a minute by default, so it doesn't spend its time being
+throttled. If your quota is higher, set `embedder.requests-per-minute` to match.
 
 For a large backfill or a busy table:
 - use TEI;
