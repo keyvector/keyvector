@@ -1,0 +1,15 @@
+/* Keyvector: teal accent on Starlight's defaults. */
+:root {
+	--sl-color-accent-low: #052e2b;
+	--sl-color-accent: #0d9488;
+	--sl-color-accent-high: #99f6e4;
+}
+:root[data-theme='light'] {
+	--sl-color-accent-low: #ccfbf1;
+	--sl-color-accent: #0f766e;
+	--sl-color-accent-high: #134e4a;
+}
+.diagram pre {
+	font-size: 0.8rem;
+	line-height: 1.35;
+}

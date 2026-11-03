@@ -1,0 +1,66 @@
+---
+title: Semantic search for Amazon Keyspaces
+description: Keyvector keeps an Amazon S3 Vectors index in sync with your Keyspaces table, so you can search it by meaning without moving your data. Open source, runs in your own AWS account.
+template: splash
+hero:
+  tagline: Search your Keyspaces data by meaning, without moving it. Keyvector follows your table's change stream and keeps a vector index in step with it, in your own AWS account.
+  actions:
+    - text: Quick start
+      link: /start/quick-start/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/keyvector/keyvector
+      icon: github
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+<div class="diagram">
+
+```text
+ Keyspaces table ──change stream──▶ keyvector ──▶ embed ──▶ S3 Vectors index
+                                                   │
+                         your Sentence-Transformers model (TEI), Bedrock, or any OpenAI-compatible API
+
+ keyvector query "…" ──▶ embed ──▶ nearest rows ──▶ read them back from Keyspaces ──▶ current results
+```
+
+</div>
+
+## Why teams use it
+
+<CardGrid>
+	<Card title="No migration" icon="approve-check">
+		Keyspaces stays your source of truth and your application keeps writing to it unchanged. Turn on the
+		table's change stream and the index follows.
+	</Card>
+	<Card title="The index stays right" icon="random">
+		Inserts, updates, deletes and expiries all reach the index. A failed batch is retried, never skipped, and a
+		restart resumes where it stopped. Tested against live AWS.
+	</Card>
+	<Card title="Your data stays in your account" icon="setting">
+		Runs on your ECS under an IAM role that can read one table and write one index. With a self-hosted model,
+		your text never leaves your VPC.
+	</Card>
+	<Card title="Pick your model" icon="puzzle">
+		Any open Sentence-Transformers model on Hugging Face TEI, Amazon Bedrock (Titan, Cohere), or an
+		OpenAI-compatible API.
+	</Card>
+	<Card title="Pays only for real changes" icon="star">
+		A row is embedded only when its text changes. Updates to other columns cost nothing, and metadata changes
+		reuse the stored vector.
+	</Card>
+	<Card title="Open source" icon="open-book">
+		Apache-2.0. Read every line before it touches your data, and change it if you need to.
+	</Card>
+</CardGrid>
+
+## Start here
+
+<CardGrid>
+	<LinkCard title="Why Keyvector" description="Who it's for, the alternatives, and when it isn't the right fit." href="/start/why/" />
+	<LinkCard title="Quick start" description="Index a table and run your first semantic query." href="/start/quick-start/" />
+	<LinkCard title="Deploy to your account" description="One CloudFormation stack per table, least-privilege IAM." href="/guides/deploy/" />
+	<LinkCard title="Dev notes" description="What we learned building it, including what broke against real AWS." href="/notes/" />
+</CardGrid>
