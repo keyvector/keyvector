@@ -22,6 +22,48 @@ API.
  keyvector query "..." ──▶ embed ──▶ nearest keys ──▶ SELECT rows from Keyspaces ──▶ results
 ```
 
+## Why Keyvector
+
+**It's for teams whose data lives in Amazon Keyspaces and who now want to search it by
+meaning**: "find tickets like this one", product search that understands the question,
+retrieval for an AI assistant (RAG), "more like this" recommendations, near-duplicate
+detection. Keyspaces can't do any of that today, and the usual ways to get it all cost more
+than they look.
+
+| Your other option | What it costs you |
+|---|---|
+| Migrate to a Cassandra with vector search (DataStax Astra DB, ScyllaDB, self-managed Cassandra 5) | Redoing a database migration you probably just finished, and leaving a managed AWS service |
+| Move the data to DynamoDB or OpenSearch | Rewriting your data layer and running two databases during the move |
+| Build the sync pipeline yourself | Weeks of work on the parts that are easy to get wrong (deletes, retries, restarts, backfill, composite keys), then owning it on call |
+| Wait for AWS to add vectors to Keyspaces | An unknown wait |
+
+With Keyvector you keep everything as it is and add search beside it:
+
+- **No migration.** Keyspaces stays your source of truth, and your application keeps writing
+  to it unchanged. Turn on the table's change stream and the index follows.
+- **The index stays right.** Every insert, update, delete and expiry reaches the index, a
+  failed batch is retried rather than skipped, and a restart picks up where it left off.
+  [Tested end to end against live AWS](#project-status), including a model-server outage
+  mid-run.
+- **Results are never stale.** A query reads the matching rows back from Keyspaces, so you
+  get what the table holds now, not a copy taken when the row was indexed.
+- **Your data stays in your account.** It runs on your ECS, under an IAM role that can read
+  one table and write one index. With a self-hosted model, your text never leaves your VPC.
+- **Pick your model.** Any open Sentence-Transformers model on Hugging Face TEI (yours to
+  fine-tune, no per-token charges, no request quota), Amazon Bedrock, or any OpenAI-compatible
+  API, chosen per table in the config.
+- **Cheap to run.** One small container per table. Rows are embedded only when their text
+  changes, so updates to other columns cost nothing, and vectors live in S3 Vectors, which
+  AWS prices for storage at scale rather than for always-on servers.
+- **Open source, Apache-2.0.** Read every line before it touches your data, run it however
+  you like, and change it if you need to.
+
+**When it isn't the right fit:** if you are free to change databases, a database with
+built-in vector search is simpler than running two systems. If you need search results to
+be transactionally consistent with writes, note that the index trails the table by seconds.
+And if you are on a database other than Keyspaces, this version won't help yet (see the
+roadmap).
+
 ## What it does that a script doesn't
 
 - **Never skips a change.** A batch that fails is retried with backoff; after `max-attempts`
