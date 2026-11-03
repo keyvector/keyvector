@@ -81,7 +81,8 @@ Most of the work went into the parts that fail quietly:
 - **Filters run inside the search.** The columns you choose are stored with each vector, and
   S3 Vectors applies filters (category, tenant, price or date ranges) before the vector search.
 - **Your choice of model:** an open Sentence-Transformers model on Hugging Face TEI, running
-  privately in your VPC, or Amazon Bedrock, or any OpenAI-compatible API.
+  privately in your VPC, or Amazon Bedrock, or any OpenAI-compatible API. (Since 3 November,
+  Keyvector can also run the model itself.)
 - **Least privilege.** The CloudFormation template gives the task read access to one table and
   write access to one index, and nothing else.
 
@@ -107,7 +108,8 @@ been run end to end yet. The [status page](/project/status/) is kept honest abou
 - [Deploy to your account](/guides/deploy/): one CloudFormation stack per table.
 
 Next on the [roadmap](/project/roadmap/):
-- **Embeddings with no model server at all**, run inside Keyvector itself.
+- ~~**Embeddings with no model server at all**~~: shipped the day after this post. See
+  [Embeddings without a model server](/notes/embeddings-without-a-model-server/).
 - A **verify** command that reports any drift between the table and the index.
 - **DynamoDB as a source**, to keep its new vector indexes filled.
 

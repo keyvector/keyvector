@@ -10,7 +10,7 @@ Metadata:
       - Label: {default: Source table}
         Parameters: [KeyspaceName, TableName, TextColumns, MetadataColumns, StoreTextAs]
       - Label: {default: Embeddings}
-        Parameters: [Embedder, EmbedderModel, Dimensions, TeiImage, EmbedderUrl, ApiKeySecretArn]
+        Parameters: [Embedder, EmbedderModel, ModelRevision, Dimensions, TeiImage, EmbedderUrl, ApiKeySecretArn]
       - Label: {default: Vector index}
         Parameters: [CreateVectorBucket, VectorBucketName, CreateVectorIndex, VectorIndexName, DistanceMetric]
       - Label: {default: Runtime}
@@ -36,15 +36,23 @@ Parameters:
 
   Embedder:
     Type: String
-    Default: tei
-    AllowedValues: [tei, bedrock, openai]
-    Description: tei runs your own Sentence-Transformers model in the task; bedrock and openai call an API.
+    Default: local
+    AllowedValues: [local, tei, bedrock, openai]
+    Description: >-
+      local runs a Sentence-Transformers model inside Keyvector itself (no sidecar); tei runs it in a
+      Hugging Face TEI container in the same task; bedrock and openai call an API.
   EmbedderModel:
     Type: String
     Default: sentence-transformers/all-MiniLM-L6-v2
     Description: >-
-      tei - a Hugging Face model id; bedrock - e.g. amazon.titan-embed-text-v2:0;
+      local or tei - a Hugging Face model id; bedrock - e.g. amazon.titan-embed-text-v2:0;
       openai - e.g. text-embedding-3-small.
+  ModelRevision:
+    Type: String
+    Default: main
+    Description: >-
+      local only - the model's Hugging Face revision. Pin a commit hash in production, so the model
+      can't change under you. Ignored if the image already contains the model (see the Dockerfile).
   Dimensions:
     Type: Number
     Default: 384
@@ -91,8 +99,9 @@ Parameters:
   SubnetIds:
     Type: List<AWS::EC2::Subnet::Id>
     Description: >-
-      Subnets with a route to AWS APIs (NAT or VPC endpoints). With tei, the model is downloaded
-      from huggingface.co at start, so they also need a route to the internet.
+      Subnets with a route to AWS APIs (NAT or VPC endpoints). With local or tei, the model is
+      downloaded from huggingface.co at start unless the image already contains it, so they also
+      need a route to the internet in that case.
   AssignPublicIp:
     Type: String
     Default: DISABLED
@@ -289,6 +298,7 @@ Resources:
             - {Name: SYNC_STORE_TEXT_AS, Value: !Ref StoreTextAs}
             - {Name: EMBEDDER_TYPE, Value: !Ref Embedder}
             - {Name: EMBEDDER_MODEL, Value: !Ref EmbedderModel}
+            - {Name: EMBEDDER_MODEL_REVISION, Value: !Ref ModelRevision}
             - {Name: EMBEDDER_DIMENSIONS, Value: !Ref Dimensions}
             - Name: EMBEDDER_URL
               Value: !If [UseTei, 'http://localhost:8080', !Ref EmbedderUrl]

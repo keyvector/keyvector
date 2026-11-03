@@ -16,10 +16,20 @@ RUN mvn -B -q -DskipTests -Dspotbugs.skip=true package \
  && cp keyvector-app/target/keyvector-app-*.jar /src/keyvector.jar
 
 FROM amazoncorretto:17-al2023-headless
+# Optional: bake a model in for embedder.type = "local", so tasks start with no network access
+# to Hugging Face. Example:
+#   docker build --build-arg MODEL=sentence-transformers/all-MiniLM-L6-v2 \
+#                --build-arg MODEL_REVISION=1110a243fdf4706b3f48f1d95db1a4f5529b4d41 -t keyvector .
+ARG MODEL=""
+ARG MODEL_REVISION="main"
 RUN dnf install -y shadow-utils curl-minimal && dnf clean all \
  && useradd --uid 10001 --create-home keyvector
 WORKDIR /app
 COPY --from=build /src/keyvector.jar /app/keyvector.jar
+ENV KEYVECTOR_MODEL_CACHE=/app/models
+RUN mkdir -p /app/models && if [ -n "$MODEL" ]; then \
+      java -jar /app/keyvector.jar fetch-model "$MODEL" --revision "$MODEL_REVISION"; \
+    fi && chown -R keyvector /app/models
 COPY keyvector.example.conf /app/keyvector.conf
 USER keyvector
 ENV APPLICATION_CONF_LOCATION=/app/keyvector.conf \

@@ -24,19 +24,13 @@ A stream's view type can't be changed later. Keyvector refuses to start on a `KE
 `OLD_IMAGE` stream, because every change would look like a delete.
 :::
 
-## 2. Pick a model
+## 2. Configure and build
 
-Run an open model locally with Hugging Face text-embeddings-inference:
-
-```bash
-docker run -p 8080:80 ghcr.io/huggingface/text-embeddings-inference:cpu-1.8 \
-  --model-id sentence-transformers/all-MiniLM-L6-v2      # 384 dimensions
-```
-
-Or set `embedder.type = "bedrock"` to use Amazon Bedrock. See
-[Choose an embedding model](/guides/models/).
-
-## 3. Configure and build
+The example configuration embeds with
+[all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) **inside
+Keyvector**, so there's no model server to run and no API key. The model is downloaded once
+(about 90 MB) and cached. Create your vector index with **384 dimensions** to match it, or see
+[Choose an embedding model](/guides/models/) for the alternatives.
 
 ```bash
 git clone https://github.com/keyvector/keyvector && cd keyvector
@@ -45,7 +39,7 @@ mvn -q -DskipTests package
 alias keyvector='java -jar keyvector-app/target/keyvector-app-0.1.0-SNAPSHOT.jar'
 ```
 
-## 4. Check, run, backfill, query
+## 3. Check, run, backfill, query
 
 ```bash
 keyvector check                  # reads only; five checks, all must pass

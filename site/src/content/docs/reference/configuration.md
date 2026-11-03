@@ -5,6 +5,9 @@ description: The settings in keyvector.conf and their environment-variable overr
 
 Configuration is a HOCON file; start from
 [`keyvector.example.conf`](https://github.com/keyvector/keyvector/blob/main/keyvector.example.conf).
+The `local` embedder caches models under `~/.cache/keyvector/models`, or `$KEYVECTOR_MODEL_CACHE`;
+`HF_TOKEN` is sent for gated models.
+
 Every value can be overridden by an environment variable named after its path, without the
 `keyvector.` prefix, upper-cased, with dots and dashes as underscores. For example,
 `keyvector.embedder.url` becomes `EMBEDDER_URL`. The CloudFormation template configures the
@@ -21,8 +24,13 @@ container entirely this way.
 | `sync.store-text-as` | | Also store the embedded text under this metadata key (make it non-filterable). |
 | `sync.on-empty-text` | `delete` | `delete` the vector or `skip` when a row's text becomes empty. |
 | `sync.key-columns` | | Only if stream records carry no primary key (they normally do). |
-| `embedder.type` | `bedrock` | `tei`, `bedrock` or `openai`. |
-| `embedder.model` | Titan V2 | Bedrock or OpenAI model id. |
+| `embedder.type` | `bedrock` | `local` (in process), `tei`, `bedrock` or `openai`. The example config uses `local`. |
+| `embedder.model` | Titan V2 | A Hugging Face repo id (`local`), or a Bedrock or OpenAI model id. |
+| `embedder.model-revision` | `main` | `local`: the Hugging Face revision. Pin a commit hash. |
+| `embedder.model-path` | | `local`: a directory holding the model's files; nothing is downloaded. |
+| `embedder.onnx-file` | | `local`: the ONNX file inside the model, if not `onnx/model.onnx` or `model.onnx`. |
+| `embedder.max-tokens` | the model's | `local`: truncate text to this many tokens. |
+| `embedder.threads` | all cores | `local`: ONNX Runtime threads. |
 | `embedder.dimensions` | | Must equal the model's output and the index. |
 | `embedder.url` | | TEI base URL, or an OpenAI-compatible base URL. |
 | `embedder.api-key-env` | | Name of the environment variable holding an API key; never the key itself. |

@@ -21,7 +21,7 @@ public abstract class BatchingEmbedder implements Embedder {
     private long minIntervalNanos;
     private long nextRequestNanos;
 
-    BatchingEmbedder(int batchSize, int concurrency, int dimensions, String documentPrefix, String queryPrefix) {
+    protected BatchingEmbedder(int batchSize, int concurrency, int dimensions, String documentPrefix, String queryPrefix) {
         if (batchSize < 1 || concurrency < 1) {
             throw new IllegalArgumentException("embedder.batch-size and embedder.concurrency must be positive");
         }

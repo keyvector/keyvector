@@ -13,5 +13,13 @@ jobs:
           distribution: corretto
           java-version: '17'
           cache: maven
+      # The local embedder is compared against reference vectors from Hugging Face's TEI.
+      # The two models (~220 MB) are cached between runs, keyed by their pinned revisions.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/keyvector/models
+          key: models-minilm-1110a24-bge-5c38ec7
       - run: mvn -B -Dspotbugs.skip=true verify
+        env:
+          KEYVECTOR_MODEL_TESTS: '1'
       - run: pip install cfn-lint && cfn-lint deploy/keyvector.yaml

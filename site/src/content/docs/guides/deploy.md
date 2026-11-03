@@ -8,7 +8,8 @@ creates:
 - the vector bucket and index (optional);
 - a dead-letter queue;
 - the IAM roles;
-- an ECS Fargate service running Keyvector, with the model in the same task when you choose TEI.
+- an ECS Fargate service running Keyvector. With `Embedder=local` (the default) the model runs
+  inside Keyvector; with `Embedder=tei` it runs in a second container in the same task.
 
 :::caution[Preview]
 The template passes `cfn-lint` but hasn't yet been deployed end to end; the connector itself
@@ -35,8 +36,9 @@ has been tested against live AWS from a workstation. See [Status and testing](/p
    - CloudWatch Logs and ECR
    - Bedrock, if you use it
 
-   With TEI, the model is downloaded from huggingface.co at start, so the subnets also need
-   internet access. To avoid that, bake the model into your own image.
+   With `local` or TEI, the model is downloaded from huggingface.co at start unless the image
+   already contains it. To need no internet access, bake it in:
+   `docker build --build-arg MODEL=<repo> --build-arg MODEL_REVISION=<commit> …`.
 
 ## Create the stack
 
@@ -48,7 +50,8 @@ aws cloudformation deploy \
   --parameter-overrides \
     KeyspaceName=media TableName=movies \
     TextColumns=title,overview MetadataColumns=genre,release_date \
-    Embedder=tei EmbedderModel=sentence-transformers/all-MiniLM-L6-v2 Dimensions=384 \
+    Embedder=local EmbedderModel=sentence-transformers/all-MiniLM-L6-v2 \
+    ModelRevision=1110a243fdf4706b3f48f1d95db1a4f5529b4d41 Dimensions=384 \
     VectorBucketName=my-vectors VectorIndexName=movies \
     Image=<account>.dkr.ecr.<region>.amazonaws.com/keyvector:0.1.0 \
     VpcId=vpc-... SubnetIds=subnet-...,subnet-...

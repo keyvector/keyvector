@@ -77,9 +77,10 @@ roadmap).
   reversibly, so the stream, the backfill and the query all agree on which vector is which row.
 - **Backfill** the rows a table had before the stream was switched on; resumable with
   `--skip-existing`.
-- **Your model, or a managed one.** Hugging Face text-embeddings-inference (any
-  Sentence-Transformers model) as a sidecar in the same task, Amazon Bedrock (Titan Text
-  Embeddings v2, Cohere Embed), or any OpenAI-compatible `/embeddings` endpoint.
+- **Embeddings included.** By default Keyvector runs a Sentence-Transformers model itself, in
+  process with ONNX Runtime: no model server, no API key, no per-token cost, and text that never
+  leaves the process. Or use Hugging Face TEI, Amazon Bedrock (Titan, Cohere), or any
+  OpenAI-compatible `/embeddings` endpoint.
 - **Least-privilege by construction.** The CloudFormation template grants read on one table
   and its stream, the connector's own lease tables, one vector index and one queue.
 
@@ -93,16 +94,13 @@ matches your model, Java 17+ and Maven (or Docker).
 #    In cqlsh:  ALTER TABLE media.movies WITH cdc = true
 #               AND CUSTOM_PROPERTIES = {'cdc_specification': {'view_type': 'NEW_AND_OLD_IMAGES'}};
 
-# 2. Run a model locally (or skip this and use embedder.type = "bedrock").
-docker run -p 8080:80 ghcr.io/huggingface/text-embeddings-inference:cpu-1.8 \
-  --model-id sentence-transformers/all-MiniLM-L6-v2
-
-# 3. Configure and build.
+# 2. Configure and build. The example config embeds with all-MiniLM-L6-v2 inside Keyvector,
+#    so there is no model server to run; it's downloaded and cached on first use.
 cp keyvector.example.conf keyvector.conf      # set keyspace, table, columns, bucket, index
 mvn -q -DskipTests package
 alias keyvector='java -jar keyvector-app/target/keyvector-app-0.1.0-SNAPSHOT.jar'
 
-# 4. Check everything before writing anything, then go.
+# 3. Check everything before writing anything, then go.
 keyvector check
 keyvector run &                 # follows the stream
 keyvector backfill              # indexes the rows that already existed
@@ -128,6 +126,7 @@ with the model in the same task when `Embedder` is `tei`. See [deploy/README.md]
 | `redrive [--queue-url U]` | Resync every row parked in the dead-letter queue. |
 | `query TEXT [--top-k N] [--filter JSON] [--no-rows]` | Semantic search; one JSON line per hit, with the current row. |
 | `check` | Validate the configuration against AWS without writing anything. |
+| `fetch-model REPO [--revision R]` | Download a model for `embedder.type = "local"` into the cache (used to bake it into an image). |
 
 ## Configuration
 
@@ -140,7 +139,7 @@ settings that matter:
 | `sync.text-columns` / `sync.text-template` | What each row is embedded as: columns joined, or `"{title}: {overview}"`. |
 | `sync.metadata-columns` | Columns stored with each vector, for `--filter`. Timestamps become epoch ms so ranges work. |
 | `sync.on-empty-text` | `delete` (default) or `skip` when a row's text becomes empty. |
-| `embedder.type` | `tei`, `bedrock` or `openai`. |
+| `embedder.type` | `local` (in process), `tei`, `bedrock` or `openai`. |
 | `embedder.dimensions` | Must equal the model's output and the index's dimension; checked at startup. |
 | `embedder.document-prefix` / `query-prefix` | For models that want them (E5: `passage: ` / `query: `). |
 | `processor.max-attempts` / `dead-letter-queue-url` | When a failing batch is parked rather than retried. |

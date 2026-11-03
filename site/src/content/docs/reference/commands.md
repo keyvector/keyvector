@@ -17,5 +17,6 @@ The config file defaults to `$APPLICATION_CONF_LOCATION`, then `./keyvector.conf
 | `redrive [--queue-url URL]` | Resync every row parked in the dead-letter queue. |
 | `query TEXT [--top-k N] [--filter JSON] [--no-rows]` | Semantic search; one JSON line per hit. |
 | `check` | Validate the configuration against AWS without writing anything. |
+| `fetch-model REPO [--revision R] [--onnx-file F]` | Download a model for `embedder.type = "local"` into the cache. Needs no config; the Dockerfile uses it to bake a model into the image. |
 
 `run` serves `GET /health` on port 8081 (`HEALTH_PORT`) for container health checks.

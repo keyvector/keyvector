@@ -43,9 +43,9 @@ import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
 		Runs on your ECS under an IAM role that can read one table and write one index. With a self-hosted model,
 		your text never leaves your VPC.
 	</Card>
-	<Card title="Pick your model" icon="puzzle">
-		Any open Sentence-Transformers model on Hugging Face TEI, Amazon Bedrock (Titan, Cohere), or an
-		OpenAI-compatible API.
+	<Card title="Embeddings included" icon="puzzle">
+		Keyvector runs a Sentence-Transformers model itself: no model server, no API key, no per-token cost.
+		Or use Hugging Face TEI, Amazon Bedrock, or an OpenAI-compatible API.
 	</Card>
 	<Card title="Pays only for real changes" icon="star">
 		A row is embedded only when its text changes. Updates to other columns cost nothing, and metadata changes

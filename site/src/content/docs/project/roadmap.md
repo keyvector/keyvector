@@ -3,6 +3,7 @@ title: Roadmap
 description: What's planned next.
 ---
 
+- ~~Embeddings with no model server~~: shipped as `embedder.type = "local"`
 - **`keyvector verify`:** sample the table and the index and report drift
 - **CloudWatch metrics and alarms:** lag, and embedded, skipped and dead-lettered counts
 - **Chunking** long text into several vectors per row

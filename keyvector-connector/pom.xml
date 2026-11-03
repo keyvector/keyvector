@@ -33,6 +33,18 @@
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>sqs</artifactId>
         </dependency>
+        <!-- In-process embeddings (embedder.type = "local"): ONNX Runtime runs the model,
+             Hugging Face's tokenizers (Rust, via DJL) prepare its input. -->
+        <dependency>
+            <groupId>com.microsoft.onnxruntime</groupId>
+            <artifactId>onnxruntime</artifactId>
+            <version>${onnxruntime.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ai.djl.huggingface</groupId>
+            <artifactId>tokenizers</artifactId>
+            <version>${djl.tokenizers.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>

@@ -3,12 +3,14 @@ title: Status and testing
 description: What has been tested against live AWS, and what hasn't yet.
 ---
 
-**Pre-release, version 0.1.** 223 unit tests cover:
+**Pre-release, version 0.1.** 232 unit tests cover:
 - the sync rules
 - key encoding
 - the embedders
 - throttling and retries
 - the dead-letter behaviour
+- the in-process embedder, whose vectors are compared with Hugging Face TEI's for two models
+  (all-MiniLM-L6-v2 and bge-small-en-v1.5) and must match exactly
 
 ## Tested end to end against live AWS (2 November 2026)
 

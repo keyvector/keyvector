@@ -38,6 +38,11 @@ public record Settings(
     boolean normalize,
     String documentPrefix,
     String queryPrefix,
+    String modelPath,
+    String modelRevision,
+    String onnxFile,
+    int maxTokens,
+    int threads,
     String sinkType,
     String vectorBucket,
     String vectorIndex) {
@@ -66,6 +71,11 @@ public record Settings(
             getConfigValue(c, "keyvector.embedder.normalize", true, false),
             getConfigValue(c, "keyvector.embedder.document-prefix", "", false),
             getConfigValue(c, "keyvector.embedder.query-prefix", "", false),
+            getConfigValue(c, "keyvector.embedder.model-path", "", false),
+            getConfigValue(c, "keyvector.embedder.model-revision", "main", false),
+            getConfigValue(c, "keyvector.embedder.onnx-file", "", false),
+            getConfigValue(c, "keyvector.embedder.max-tokens", 0, false),
+            getConfigValue(c, "keyvector.embedder.threads", 0, false),
             getConfigValue(c, "keyvector.sink.type", "s3vectors", false).trim().toLowerCase(),
             getConfigValue(c, "keyvector.sink.vector-bucket", "", true),
             getConfigValue(c, "keyvector.sink.vector-index", "", true));

@@ -1,6 +1,7 @@
 package dev.keyvector.app;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,6 +21,8 @@ import dev.keyvector.connector.backfill.Redrive;
 import dev.keyvector.connector.backfill.Resync;
 import dev.keyvector.connector.embed.Embedder;
 import dev.keyvector.connector.embed.Embedders;
+import dev.keyvector.connector.embed.local.LocalEmbedder;
+import dev.keyvector.connector.embed.local.ModelFiles;
 import dev.keyvector.connector.query.KeyvectorQuery;
 import dev.keyvector.connector.sink.Sinks;
 import dev.keyvector.connector.sink.VectorSink;
@@ -51,6 +54,8 @@ public final class Main {
         "      --filter JSON           S3 Vectors metadata filter, e.g. '{\"genre\":\"drama\"}'",
         "      --no-rows               return keys and metadata without reading Keyspaces",
         "  check                     Validate the configuration against AWS without writing anything",
+        "  fetch-model REPO          Download a Hugging Face model for embedder.type = local into the cache",
+        "      --revision R            commit hash or branch (default main; pin a hash in production)",
         "",
         "The config file defaults to $APPLICATION_CONF_LOCATION, then ./keyvector.conf.");
 
@@ -61,6 +66,16 @@ public final class Main {
         Args args = Args.parse(argv);
         if (args.command == null || args.has("help") || "help".equals(args.command)) {
             System.out.println(USAGE);
+            return;
+        }
+        if ("fetch-model".equals(args.command)) {
+            // Needs no config file: used at image build time to bake a model in.
+            if (args.positional.size() != 1) {
+                throw new IllegalArgumentException("fetch-model needs one Hugging Face repo id");
+            }
+            ModelFiles files = ModelFiles.hub(args.positional.get(0), args.get("revision", "main"), ModelFiles.defaultCacheRoot());
+            Path onnx = LocalEmbedder.prefetch(files, args.get("onnx-file", ""));
+            System.out.println("Cached " + files.describe() + " (" + onnx.getFileName() + ") under " + ModelFiles.defaultCacheRoot());
             return;
         }
         String configPath = args.get("config", System.getenv().getOrDefault("APPLICATION_CONF_LOCATION", "keyvector.conf"));
@@ -223,7 +238,7 @@ public final class Main {
         }
 
         private static boolean takesValue(String name) {
-            return List.of("config", "page-size", "batch-size", "limit", "queue-url", "top-k", "filter").contains(name);
+            return List.of("config", "page-size", "batch-size", "limit", "queue-url", "top-k", "filter", "revision", "onnx-file").contains(name);
         }
 
         boolean has(String name) {

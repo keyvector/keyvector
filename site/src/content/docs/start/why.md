@@ -34,8 +34,9 @@ Keyspaces can't do any of that on its own: it has no vector type and no vector i
   what the table holds now.
 - **Your data stays in your account.** It runs on your ECS, under an IAM role that can read one
   table and write one index. With a self-hosted model your text never leaves your VPC.
-- **Pick your model.** Open Sentence-Transformers models on Hugging Face TEI (fine-tune them, no
-  per-token charges, no request quota), Amazon Bedrock, or any OpenAI-compatible API.
+- **Embeddings included.** Keyvector runs an open Sentence-Transformers model itself, in process:
+  no model server, no API key, no per-token charges, no request quota. Or use Hugging Face TEI,
+  Amazon Bedrock, or any OpenAI-compatible API.
 - **Cheap to run.** One small container per table. Rows are embedded only when their text
   changes, and vectors live in S3 Vectors, priced for storage rather than always-on servers.
 - **Open source, Apache-2.0.**
