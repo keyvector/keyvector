@@ -7,7 +7,19 @@ public final class Embedders {
     private Embedders() {
     }
 
+    /** Titan Text Embeddings V2's on-demand quota: 60 requests a minute, not adjustable. */
+    static final int TITAN_DEFAULT_RPM = 60;
+
     public static Embedder create(Settings s) {
+        BatchingEmbedder e = build(s);
+        int rpm = s.requestsPerMinute();
+        if (rpm <= 0 && "bedrock".equals(s.embedderType()) && s.embedderModel().contains("titan-embed")) {
+            rpm = TITAN_DEFAULT_RPM;
+        }
+        return e.withRateLimit(rpm);
+    }
+
+    private static BatchingEmbedder build(Settings s) {
         switch (s.embedderType()) {
             case "tei":
                 return new TeiEmbedder(s.embedderUrl(), s.dimensions(), s.batchSize(), s.concurrency(), s.normalize(),

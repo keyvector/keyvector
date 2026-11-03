@@ -29,6 +29,20 @@
             <artifactId>keyvector-connector</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- Credentials from `aws login` (and SSO): the default provider chain picks these up
+             only when the modules are on the classpath. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>signin</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sso</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>ssooidc</artifactId>
+        </dependency>
       
 
         <!-- Logging -->

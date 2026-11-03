@@ -111,3 +111,10 @@ Thumbs.db
 
 # Local configs may name real accounts and tables
 keyvector.conf
+
+# End-to-end test output and generated, account-specific configs
+e2e/logs/
+e2e/*.conf
+.venv/
+# Local agent notes: name the AWS account and its root email
+CLAUDE.md

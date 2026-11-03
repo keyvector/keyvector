@@ -8,7 +8,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import software.amazon.awssdk.core.SdkBytes;
-import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
 import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelRequest;
@@ -64,7 +65,7 @@ public final class BedrockEmbedder extends BatchingEmbedder {
             .accept("application/json")
             .body(SdkBytes.fromString(body.toString(), StandardCharsets.UTF_8))
             .build();
-        JsonNode res = Retry.call("Bedrock " + model, 6, BedrockEmbedder::retryable,
+        JsonNode res = Retry.call("Bedrock " + model, 8, BedrockEmbedder::retryable,
             () -> HttpJson.MAPPER.readTree(client.invokeModel(req).body().asUtf8String()));
         List<float[]> out = new ArrayList<>(texts.size());
         if (cohere) {
@@ -84,9 +85,20 @@ public final class BedrockEmbedder extends BatchingEmbedder {
         return out;
     }
 
-    private static boolean retryable(Exception e) {
-        return e instanceof SdkException && ((SdkException) e).retryable()
-            || String.valueOf(e.getMessage()).contains("ThrottlingException");
+    /**
+     * Throttling, server errors and network failures are worth another attempt. The first
+     * version asked {@code SdkException.retryable()} and grepped the message for
+     * "ThrottlingException": the SDK reports a throttle it has already retried as not
+     * retryable, and the message says "Too many requests", so a throttle failed the batch
+     * at once. Titan Text Embeddings V2 allows 60 requests a minute and the quota cannot be
+     * raised, so this is the normal case, not an edge.
+     */
+    static boolean retryable(Exception e) {
+        if (e instanceof AwsServiceException) {
+            AwsServiceException a = (AwsServiceException) e;
+            return a.isThrottlingException() || a.statusCode() == 429 || a.statusCode() >= 500;
+        }
+        return e instanceof SdkClientException;
     }
 
     @Override

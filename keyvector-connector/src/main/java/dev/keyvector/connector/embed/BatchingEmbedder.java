@@ -11,13 +11,15 @@ import java.util.concurrent.Future;
  * applies the document and query prefixes some models need (E5 wants {@code "passage: "} and
  * {@code "query: "}), and checks every vector has the dimensions the index expects.
  */
-abstract class BatchingEmbedder implements Embedder {
+public abstract class BatchingEmbedder implements Embedder {
 
     private final int batchSize;
     private final int dimensions;
     private final String documentPrefix;
     private final String queryPrefix;
     private final ExecutorService pool;
+    private long minIntervalNanos;
+    private long nextRequestNanos;
 
     BatchingEmbedder(int batchSize, int concurrency, int dimensions, String documentPrefix, String queryPrefix) {
         if (batchSize < 1 || concurrency < 1) {
@@ -37,6 +39,34 @@ abstract class BatchingEmbedder implements Embedder {
         });
     }
 
+    /**
+     * Space requests so that no more than {@code requestsPerMinute} start in any minute,
+     * across every thread. Zero or less means no limit. A model with a hard per-minute quota
+     * (Titan V2: 60) is otherwise hammered by the concurrent requests and answers with
+     * throttling, which costs retries and backoff rather than throughput.
+     */
+    public BatchingEmbedder withRateLimit(int requestsPerMinute) {
+        this.minIntervalNanos = requestsPerMinute > 0 ? 60_000_000_000L / requestsPerMinute : 0;
+        return this;
+    }
+
+    /** Blocks until this request may start. */
+    protected void pace() throws InterruptedException {
+        if (minIntervalNanos <= 0) {
+            return;
+        }
+        long wait;
+        synchronized (this) {
+            long now = System.nanoTime();
+            long start = Math.max(now, nextRequestNanos);
+            nextRequestNanos = start + minIntervalNanos;
+            wait = start - now;
+        }
+        if (wait > 0) {
+            Thread.sleep(wait / 1_000_000, (int) (wait % 1_000_000));
+        }
+    }
+
     /** One request: at most {@code batchSize} texts, prefixes already applied. */
     protected abstract List<float[]> request(List<String> texts, boolean query) throws Exception;
 
@@ -48,7 +78,10 @@ abstract class BatchingEmbedder implements Embedder {
             for (String t : texts.subList(i, Math.min(texts.size(), i + batchSize))) {
                 slice.add(documentPrefix + t);
             }
-            parts.add(pool.submit(() -> request(slice, false)));
+            parts.add(pool.submit(() -> {
+                pace();
+                return request(slice, false);
+            }));
         }
         List<float[]> out = new ArrayList<>(texts.size());
         for (Future<List<float[]>> f : parts) {
@@ -67,6 +100,7 @@ abstract class BatchingEmbedder implements Embedder {
 
     @Override
     public float[] embedQuery(String text) throws Exception {
+        pace();
         float[] v = request(List.of(queryPrefix + text), true).get(0);
         checkDimensions(v);
         return v;

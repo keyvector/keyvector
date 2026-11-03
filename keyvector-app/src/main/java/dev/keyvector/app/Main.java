@@ -32,6 +32,7 @@ import software.amazon.kinesis.coordinator.Scheduler;
 public final class Main {
 
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    static final long SHUTDOWN_TIMEOUT_SECONDS = 30;
 
     static final String USAGE = String.join("\n",
         "Usage: keyvector <command> [--config keyvector.conf] [options]",
@@ -171,13 +172,24 @@ public final class Main {
         CompletableFuture<Void> running = CompletableFuture.runAsync(scheduler::run);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             // Ask KCL to stop and checkpoint; processors mid-retry stop without checkpointing.
+            // Bounded: while KCL is still starting (it waits for its lease table's index,
+            // which can take minutes) a graceful shutdown never completes, and an unbounded
+            // wait left the process unkillable except by SIGKILL. Nothing is lost by giving
+            // up: an unacknowledged batch is simply read again by the next worker.
             try {
-                scheduler.startGracefulShutdown().get();
+                scheduler.startGracefulShutdown().get(SHUTDOWN_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS);
             } catch (Exception e) {
-                logger.warn("Graceful shutdown did not complete: {}", e.toString());
+                logger.warn("Graceful shutdown did not finish within {}s ({}); stopping anyway",
+                    SHUTDOWN_TIMEOUT_SECONDS, e.toString());
+                scheduler.shutdown();
             }
         }));
-        HealthServer.start();
+        try {
+            HealthServer.start();
+        } catch (Exception e) {
+            // A health endpoint that cannot bind must not take the worker down with it.
+            logger.error("Health endpoint did not start ({}); the worker keeps running", e.toString());
+        }
         running.join();
     }
 

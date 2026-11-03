@@ -119,6 +119,13 @@ settings that matter:
 - **Filterable metadata is at most 2 KB per vector** (S3 Vectors). Store long text with
   `sync.store-text-as`, which the template makes non-filterable.
 - **One table per deployment.** Run one stack per table.
+- **Titan Text Embeddings V2 allows 60 requests a minute, and AWS does not raise it.** Titan
+  takes one text per request, so it embeds one row a second, about 3,600 rows an hour.
+  Keyvector paces itself to that by default (`embedder.requests-per-minute`). For a large
+  backfill or a busy table use TEI, Cohere Embed on Bedrock (96 texts per request) or
+  Bedrock batch inference.
+- **The first start of a new deployment takes about 12 minutes** before changes flow: KCL
+  adds an index to its DynamoDB lease table and waits for it. Later starts are immediate.
 - **Changing the model means a new index.** Vectors from two models are not comparable; create
   a new index, point a second deployment at it, backfill, then switch queries over.
 
@@ -134,8 +141,23 @@ settings that matter:
 ## Project status
 
 Pre-release (0.1). The unit tests cover the sync rules, key encoding, the embedders and the
-retry/dead-letter behaviour (`mvn test`). It has **not yet run end to end against a live
-Keyspaces stream**. That is the next milestone, and until then treat it as a preview.
+retry and dead-letter behaviour (`mvn test`, 223 tests).
+
+**Tested end to end against live AWS on 2 November 2026** (Keyspaces CDC in us-east-1,
+S3 Vectors, Bedrock Titan V2 and a local TEI with all-MiniLM-L6-v2), with the kit in
+[`e2e/`](e2e/README.md):
+
+- backfill of 302 rows gave exactly 302 vectors, keys with spaces, `&` and `=` included;
+- 61 live changes were all accounted for: 31 embedded, 10 metadata-only changes reused the
+  stored vector, 10 changes to an unembedded column wrote nothing, 10 deletes removed vectors;
+  only the rows whose text changed got new vectors;
+- stopping the connector, changing 5 rows and restarting applied exactly those 5;
+- stopping the model server mid-run lost nothing: the batches waited and landed when it came back;
+- a second connector replaying the whole stream on top of a backfill converged on the same index;
+- semantic queries returned the expected rows first, and metadata filters worked.
+
+Not yet tested live: the Fargate deployment (`deploy/keyvector.yaml`), the dead-letter queue
+and redrive, and TTL expiry.
 
 ## License
 

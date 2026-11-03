@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Keyvector end-to-end test - a Keyspaces table, its CDC stream and two S3 vector indexes. Delete the stack when done.
+
+Parameters:
+  Cdc:
+    Type: String
+    Default: DISABLED
+    AllowedValues: [ENABLED, DISABLED]
+    Description: Created DISABLED so rows can be loaded before the stream exists (that is what the backfill test needs), then updated to ENABLED.
+
+Resources:
+  Keyspace:
+    Type: AWS::Cassandra::Keyspace
+    Properties:
+      KeyspaceName: keyvector_e2e
+      Tags:
+        - {Key: created_by, Value: keyspaces-skill}
+        - {Key: generation_model, Value: claude-opus-5-5}
+        - {Key: project, Value: keyvector-e2e}
+
+  Movies:
+    Type: AWS::Cassandra::Table
+    Properties:
+      KeyspaceName: !Ref Keyspace
+      TableName: movies
+      PartitionKeyColumns:
+        - {ColumnName: studio, ColumnType: text}
+      ClusteringKeyColumns:
+        - Column: {ColumnName: movie_id, ColumnType: int}
+          OrderBy: ASC
+      RegularColumns:
+        - {ColumnName: title, ColumnType: text}
+        - {ColumnName: overview, ColumnType: text}
+        - {ColumnName: genre, ColumnType: text}
+        - {ColumnName: release_date, ColumnType: timestamp}
+        - {ColumnName: views, ColumnType: bigint}
+      BillingMode:
+        Mode: ON_DEMAND
+      CdcSpecification:
+        Status: !Ref Cdc
+        ViewType: NEW_AND_OLD_IMAGES
+      Tags:
+        - {Key: created_by, Value: keyspaces-skill}
+        - {Key: generation_model, Value: claude-opus-5-5}
+        - {Key: project, Value: keyvector-e2e}
+
+  VectorBucket:
+    Type: AWS::S3Vectors::VectorBucket
+    Properties:
+      VectorBucketName: !Sub keyvector-e2e-${AWS::AccountId}
+
+  # Bedrock Titan Text Embeddings V2 at 256 dimensions.
+  BedrockIndex:
+    Type: AWS::S3Vectors::Index
+    Properties:
+      VectorBucketArn: !GetAtt VectorBucket.VectorBucketArn
+      IndexName: movies-titan
+      DataType: float32
+      Dimension: 256
+      DistanceMetric: cosine
+
+  # Self-hosted sentence-transformers/all-MiniLM-L6-v2 through TEI: 384 dimensions.
+  TeiIndex:
+    Type: AWS::S3Vectors::Index
+    Properties:
+      VectorBucketArn: !GetAtt VectorBucket.VectorBucketArn
+      IndexName: movies-minilm
+      DataType: float32
+      Dimension: 384
+      DistanceMetric: cosine
+
+Outputs:
+  VectorBucket:
+    Value: !Sub keyvector-e2e-${AWS::AccountId}
