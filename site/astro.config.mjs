@@ -12,7 +12,10 @@ export default defineConfig({
 				'Semantic search for Amazon Keyspaces, without moving your data. Open source, runs in your own AWS account.',
 			logo: { src: './src/assets/logo.svg', replacesTitle: false },
 			favicon: '/favicon.svg',
-			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/keyvector/keyvector' }],
+			social: [
+				{ icon: 'github', label: 'GitHub', href: 'https://github.com/keyvector/keyvector' },
+				{ icon: 'email', label: 'Email hello@keyvector.dev', href: 'mailto:hello@keyvector.dev' },
+			],
 			editLink: { baseUrl: 'https://github.com/keyvector/keyvector/edit/main/site/' },
 			customCss: ['./src/styles/custom.css'],
 			lastUpdated: true,

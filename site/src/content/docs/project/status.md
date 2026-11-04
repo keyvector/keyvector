@@ -31,6 +31,22 @@ TEI running all-MiniLM-L6-v2. The kit is
 The test also found four bugs, all fixed. The
 [dev note](/notes/what-broke-against-real-aws/) covers them.
 
+## Repeated with the in-process embedder (3 November 2026)
+
+The same kit, with `embedder.type = "local"`: no model server and no Bedrock, with
+all-MiniLM-L6-v2 running inside the connector on a laptop.
+
+| Step | Result |
+|---|---|
+| `keyvector check` | All five checks passed, including loading the pinned model |
+| Backfill | 302 rows in 17 seconds, exactly 302 vectors |
+| 61 live changes | The same split: 31 embedded, 10 reused, 10 unchanged, 10 deleted |
+| Stop, change 5 rows, restart | Exactly those 5 applied |
+| Semantic queries | Each test query's target first, including a row that only ever arrived through the stream |
+
+[What Keyvector creates in your AWS account](/notes/what-keyvector-creates-in-your-aws-account/)
+shows this run in the AWS console.
+
 ## Not yet tested live
 
 - The Fargate deployment template (`deploy/keyvector.yaml`)

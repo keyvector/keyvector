@@ -13,4 +13,8 @@ description: How to build, test and contribute.
   [GitHub's vulnerability reporting](https://github.com/keyvector/keyvector/security/advisories/new),
   not in a public issue.
 
+- **Anything else:** questions, feedback, or running Keyvector on a real table and wanting to
+  talk it through: [hello@keyvector.dev](mailto:hello@keyvector.dev), or open a
+  [GitHub issue](https://github.com/keyvector/keyvector/issues).
+
 Contributions are licensed under the Apache License 2.0.
