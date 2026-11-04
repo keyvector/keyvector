@@ -1,4 +1,4 @@
-"""Writes e2e/titan.conf and e2e/minilm.conf from keyvector.example.conf for one AWS account."""
+"""Writes e2e/titan.conf, e2e/minilm.conf and e2e/local.conf from keyvector.example.conf for one AWS account."""
 import pathlib
 import sys
 
@@ -37,4 +37,13 @@ conf("minilm.conf", "keyvector-e2e-minilm", """  embedder {
     concurrency = 2
     normalize = true
   }""", "movies-minilm")
-print("wrote e2e/titan.conf and e2e/minilm.conf")
+# The in-process embedder, writing to the same index as TEI: same model, identical vectors.
+conf("local.conf", "keyvector-e2e-local", """  embedder {
+    type = "local"
+    model = "sentence-transformers/all-MiniLM-L6-v2"
+    model-revision = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+    dimensions = 384
+    batch-size = 32
+    normalize = true
+  }""", "movies-minilm")
+print("wrote e2e/titan.conf, e2e/minilm.conf and e2e/local.conf")

@@ -77,6 +77,22 @@ A Fargate task has fewer and slower cores, so expect less there; measure your ow
 fraction of these numbers is far beyond one embedding a second, and none of it is billed per
 token.
 
+## Against real AWS
+
+On 3 November 2026 the same end-to-end run that tested TEI and Bedrock was repeated with
+`embedder.type = "local"`, with no model server and no Bedrock: a Keyspaces table with CDC in
+us-east-1 and an S3 Vectors index.
+
+- `keyvector check` passed all five checks, including loading the pinned model.
+- The backfill embedded 302 rows in 17 seconds, and every row had exactly one vector.
+- 61 live changes came off the stream with the expected split: 31 embedded, 10 reused, 10 deleted
+  and 10 unchanged.
+- Stopping the connector, changing 5 rows and restarting it applied exactly those 5.
+- All three test queries returned their target movie first. One of the three movies only ever
+  reached the table through the stream.
+
+The connector ran on a laptop, not on Fargate; that deployment is still to be tested live.
+
 ## What it costs
 
 - **A bigger artifact.** The native libraries add about 65 MB to the jar, and a baked-in model

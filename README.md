@@ -199,6 +199,10 @@ S3 Vectors, Bedrock Titan V2 and a local TEI with all-MiniLM-L6-v2), with the ki
 - a second connector replaying the whole stream on top of a backfill converged on the same index;
 - semantic queries returned the expected rows first, and metadata filters worked.
 
+**Repeated on 3 November 2026 with the in-process embedder** (`embedder.type = "local"`, no
+model server): 302 rows backfilled in 17 seconds, the same 61-change split, exactly 5 changes
+after a restart, and every test query's target first.
+
 Not yet tested live: the Fargate deployment (`deploy/keyvector.yaml`), the dead-letter queue
 and redrive, and TTL expiry.
 

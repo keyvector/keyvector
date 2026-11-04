@@ -9,7 +9,7 @@ it KCL's one-time 12-minute wait per connector. Everything it creates is deleted
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r e2e/requirements.txt   # boto3[crt] is needed for `aws login` credentials
 mvn -q -DskipTests package
-python3 e2e/make-configs.py <account-id>        # writes e2e/titan.conf and e2e/minilm.conf
+python3 e2e/make-configs.py <account-id>        # writes e2e/titan.conf, minilm.conf and local.conf
 ```
 
 Create the stack with CDC **off** (`e2e/stack.yaml`, stack name `keyvector-e2e`), so rows can
@@ -32,8 +32,10 @@ aws cloudformation deploy --stack-name keyvector-e2e --template-file e2e/stack.y
 | 7 | (TEI) stop the TEI container, `e2e.py mutate-retry`, start it again | all 5 rows arrive; verify ok |
 
 Indexes: `movies-minilm` (TEI, `all-MiniLM-L6-v2`, 384 dimensions) and `movies-titan` (Bedrock, 256).
+`local.conf` runs the same steps with the in-process embedder, writing to `movies-minilm` (same
+model, identical vectors); skip step 7, since there is no model server to stop.
 
 ## Clean up
 
 Delete the `keyvector-e2e` stack, then the six tables KCL created:
-`keyvector-e2e-{minilm,titan}-lease-table`, `...-CoordinatorState` and `...-WorkerMetricStats`.
+`keyvector-e2e-{minilm,titan,local}-lease-table`, `...-CoordinatorState` and `...-WorkerMetricStats`.
