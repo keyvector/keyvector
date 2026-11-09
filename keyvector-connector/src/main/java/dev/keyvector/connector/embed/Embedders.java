@@ -46,6 +46,23 @@ public final class Embedders {
         }
     }
 
+    /** The configured reranker, or null when {@code rerank.model} is not set. */
+    public static dev.keyvector.connector.query.Reranker reranker(Settings s) {
+        if (!s.reranks()) {
+            return null;
+        }
+        ModelFiles files = s.rerankModelPath() != null && !s.rerankModelPath().isBlank()
+            ? ModelFiles.local(Path.of(s.rerankModelPath()))
+            : ModelFiles.hub(s.rerankModel(), s.rerankRevision(), ModelFiles.defaultCacheRoot());
+        try {
+            return new dev.keyvector.connector.embed.local.LocalReranker(files, s.rerankMaxTokens(), s.threads());
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not load the reranker " + files.describe() + ": " + e.getMessage(), e);
+        }
+    }
+
     private static BatchingEmbedder local(Settings s) {
         ModelFiles files;
         if (s.modelPath() != null && !s.modelPath().isBlank()) {

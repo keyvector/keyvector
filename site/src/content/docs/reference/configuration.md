@@ -24,6 +24,9 @@ container entirely this way.
 | `sync.store-text-as` | | Also store the embedded text under this metadata key (make it non-filterable). |
 | `sync.on-empty-text` | `delete` | `delete` the vector or `skip` when a row's text becomes empty. |
 | `sync.key-columns` | | Only if stream records carry no primary key (they normally do). |
+| `sync.chunk-words` | `0` | Split text into chunks of about this many words, one vector each. 0 turns chunking off. See [Long text and reranking](/guides/long-text/). |
+| `sync.chunk-overlap-words` | a fifth of `chunk-words` | Words each chunk repeats from the one before. At most half of `chunk-words`. |
+| `sync.max-chunks` | `100` | Chunks kept per row; text past them is not indexed. |
 | `embedder.type` | `bedrock` | `local` (in process), `tei`, `bedrock` or `openai`. The example config uses `local`. |
 | `embedder.model` | Titan V2 | A Hugging Face repo id (`local`), or a Bedrock or OpenAI model id. |
 | `embedder.model-revision` | `main` | `local`: the Hugging Face revision. Pin a commit hash. |
@@ -39,5 +42,10 @@ container entirely this way.
 | `embedder.requests-per-minute` | `0` (Titan: `60`) | Most requests started per minute; 0 means no limit. |
 | `embedder.document-prefix`, `query-prefix` | | For models that want them. |
 | `sink.vector-bucket`, `sink.vector-index` | | The S3 Vectors index. |
+| `rerank.model` | | A Hugging Face cross-encoder with an ONNX export. Set it to rerank `keyvector query` results. |
+| `rerank.model-revision` | `main` | Pin a commit hash. |
+| `rerank.model-path` | | A directory holding the reranker's files; nothing is downloaded. |
+| `rerank.candidates` | `50` | Vector matches the reranker re-scores. |
+| `rerank.max-tokens` | the model's | Truncate each query and text pair to this many tokens. |
 | `processor.max-attempts` | `10` | After this many failures a batch goes to the dead-letter queue, if set. |
 | `processor.dead-letter-queue-url` | | SQS queue for batches that keep failing. Without one, the shard keeps retrying. |

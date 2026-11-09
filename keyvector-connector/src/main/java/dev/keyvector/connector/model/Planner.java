@@ -33,11 +33,26 @@ public final class Planner {
     private final TextTemplate text;
     private final MetadataMapper metadata;
     private final EmptyText onEmptyText;
+    private final int keyReserve;
 
     public Planner(TextTemplate text, MetadataMapper metadata, EmptyText onEmptyText) {
+        this(text, metadata, onEmptyText, 0);
+    }
+
+    /** @param keyReserve characters to keep free in each row key, for a chunk suffix */
+    public Planner(TextTemplate text, MetadataMapper metadata, EmptyText onEmptyText, int keyReserve) {
         this.text = Objects.requireNonNull(text);
         this.metadata = Objects.requireNonNull(metadata);
         this.onEmptyText = Objects.requireNonNull(onEmptyText);
+        this.keyReserve = keyReserve;
+    }
+
+    public TextTemplate text() {
+        return text;
+    }
+
+    public MetadataMapper metadata() {
+        return metadata;
     }
 
     public record Plan(List<Action> actions, int unchanged, int rejected) {
@@ -50,7 +65,7 @@ public final class Planner {
         for (Change c : changes) {
             String key;
             try {
-                key = RowKey.encode(c.key());
+                key = RowKey.encode(c.key(), keyReserve);
             } catch (IllegalArgumentException e) {
                 // Retrying cannot make this row's key valid, so holding the shard for it would
                 // stall every other row behind it.

@@ -46,6 +46,7 @@ export default defineConfig({
 						{ label: 'Choose an embedding model', slug: 'guides/models' },
 						{ label: 'Backfill, resync and redrive', slug: 'guides/backfill' },
 						{ label: 'Query', slug: 'guides/query' },
+						{ label: 'Long text and reranking', slug: 'guides/long-text' },
 					],
 				},
 				{

@@ -63,7 +63,7 @@ public class KeyvectorTargetMapper extends AbstractTargetMapper {
             logger.warn("Could not read the vector index's dimensions ({}); continuing", e.toString());
         }
         logger.info("Keyvector syncing {}.{} with {} into {}", settings.keyspace(), settings.table(), embedder.describe(), sink.describe());
-        engine = new SyncEngine(settings.planner(), embedder, sink);
+        engine = new SyncEngine(settings.planner(), embedder, sink, settings.chunker());
     }
 
     private void checkStream() {

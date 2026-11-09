@@ -24,7 +24,9 @@ final class Check {
         boolean ok = true;
         ok &= step("text and metadata settings", () -> {
             s.planner();
-            return s.textColumns().isEmpty() ? "template " + s.textTemplate() : "columns " + s.textColumns();
+            var chunker = s.chunker();
+            return (s.textColumns().isEmpty() ? "template " + s.textTemplate() : "columns " + s.textColumns())
+                + (chunker == null ? "" : ", chunks of " + s.chunkWords() + " words (up to " + chunker.maxChunks() + " a row)");
         });
         ok &= step("CDC stream", () -> {
             var stream = StreamLocator.find(config.getOrCreateKeyspacesStreamsClient(), s.keyspace(), s.table(), config.getStreamName())
@@ -53,6 +55,17 @@ final class Check {
                 return sink.describe() + ", " + d + " dimensions";
             }
         });
+        if (s.reranks()) {
+            ok &= step("reranker", () -> {
+                try (var r = Embedders.reranker(s)) {
+                    float[] sc = r.score("Keyvector configuration check", java.util.List.of("configuration check", "unrelated text"));
+                    if (!(sc[0] > sc[1])) {
+                        throw new IllegalStateException(r.describe() + " ranked an unrelated text first; is this a reranker?");
+                    }
+                    return r.describe() + ", " + s.rerankCandidates() + " candidates";
+                }
+            });
+        }
         System.out.println(ok ? "\nAll checks passed." : "\nSome checks failed.");
         return ok;
     }

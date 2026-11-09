@@ -23,7 +23,17 @@ public final class RowKey {
     private RowKey() {
     }
 
+    /** Separates a row key from a chunk number. '#' never appears in an encoded row key: it is percent-encoded. */
+    public static final char CHUNK_SEPARATOR = '#';
+
     public static String encode(Map<String, Object> keyColumns) {
+        return encode(keyColumns, 0);
+    }
+
+    /**
+     * @param reserve characters to leave free under {@link #MAX_LENGTH}, for a chunk suffix
+     */
+    public static String encode(Map<String, Object> keyColumns, int reserve) {
         if (keyColumns == null || keyColumns.isEmpty()) {
             throw new IllegalArgumentException("A row key needs at least one primary key column");
         }
@@ -37,16 +47,40 @@ public final class RowKey {
             }
             sb.append(enc(e.getKey())).append('=').append(enc(Values.keyText(e.getValue())));
         }
-        if (sb.length() > MAX_LENGTH) {
-            throw new KeyTooLongException(sb.length());
+        if (sb.length() > MAX_LENGTH - reserve) {
+            throw new KeyTooLongException(sb.length(), MAX_LENGTH - reserve);
         }
         return sb.toString();
+    }
+
+    /** The vector key for chunk {@code n} of a row. */
+    public static String chunkKey(String rowKey, int n) {
+        return rowKey + CHUNK_SEPARATOR + n;
+    }
+
+    /** The row a vector key belongs to: the key itself, or the part before a chunk suffix. */
+    public static String rowOf(String vectorKey) {
+        int i = vectorKey.lastIndexOf(CHUNK_SEPARATOR);
+        return i < 0 ? vectorKey : vectorKey.substring(0, i);
+    }
+
+    /** The chunk number in a vector key, or -1 for an unchunked key. */
+    public static int chunkOf(String vectorKey) {
+        int i = vectorKey.lastIndexOf(CHUNK_SEPARATOR);
+        if (i < 0) {
+            return -1;
+        }
+        try {
+            return Integer.parseInt(vectorKey.substring(i + 1));
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
 
     /** Column name to the value's key text, in the encoded order. */
     public static Map<String, String> decode(String key) {
         Map<String, String> out = new LinkedHashMap<>();
-        for (String part : key.split("&", -1)) {
+        for (String part : rowOf(key).split("&", -1)) {
             int eq = part.indexOf('=');
             if (eq <= 0) {
                 throw new IllegalArgumentException("Not a Keyvector row key: " + key);
@@ -67,8 +101,9 @@ public final class RowKey {
     public static final class KeyTooLongException extends IllegalArgumentException {
         private static final long serialVersionUID = 1L;
 
-        KeyTooLongException(int length) {
-            super("Row key is " + length + " characters; S3 Vectors allows " + MAX_LENGTH);
+        KeyTooLongException(int length, int limit) {
+            super("Row key is " + length + " characters; the limit is " + limit
+                + (limit < MAX_LENGTH ? " (S3 Vectors allows " + MAX_LENGTH + ", less room for the chunk number)" : " (S3 Vectors' limit)"));
         }
     }
 }

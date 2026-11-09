@@ -70,7 +70,7 @@ public final class Backfill {
             if (skipExisting) {
                 List<String> keys = new ArrayList<>(batch.size());
                 for (Change c : batch) {
-                    keys.add(safeKey(c));
+                    keys.add(engine.indexKey(safeKey(c)));
                 }
                 Map<String, float[]> existing = sink.vectors(keys);
                 todo = new ArrayList<>();

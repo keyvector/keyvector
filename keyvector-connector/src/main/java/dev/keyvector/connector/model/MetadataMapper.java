@@ -30,6 +30,15 @@ public final class MetadataMapper {
         }
     }
 
+    /** The metadata key the embedded text is stored under, or null. */
+    public String textKey() {
+        return textKey;
+    }
+
+    public List<String> columns() {
+        return columns;
+    }
+
     public Map<String, Object> map(Map<String, Object> row, String text) {
         Map<String, Object> out = new LinkedHashMap<>();
         if (row != null) {

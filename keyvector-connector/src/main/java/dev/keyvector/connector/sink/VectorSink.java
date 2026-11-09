@@ -16,6 +16,9 @@ public interface VectorSink extends AutoCloseable {
     /** The stored vectors for these keys; a key with no vector is absent from the result. */
     Map<String, float[]> vectors(List<String> keys) throws Exception;
 
+    /** The stored metadata for these keys; a key with no vector is absent from the result. */
+    Map<String, Map<String, Object>> metadata(List<String> keys) throws Exception;
+
     /** Nearest neighbours. {@code filter} is the store's own filter syntax, or null. */
     List<Hit> query(float[] vector, int topK, Map<String, Object> filter) throws Exception;
 

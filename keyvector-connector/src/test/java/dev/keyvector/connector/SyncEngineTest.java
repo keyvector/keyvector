@@ -50,10 +50,16 @@ class SyncEngineTest {
     static final class FakeSink implements VectorSink {
         final Map<String, VectorDoc> index = new HashMap<>();
         int puts;
+        final List<String> putOrder = new ArrayList<>();
+        boolean failPuts;
 
         @Override
         public void put(List<VectorDoc> docs) {
+            if (failPuts) {
+                throw new IllegalStateException("index down");
+            }
             puts++;
+            docs.forEach(d -> putOrder.add(d.key()));
             docs.forEach(d -> index.put(d.key(), d));
         }
 
@@ -68,6 +74,17 @@ class SyncEngineTest {
             keys.forEach(k -> {
                 if (index.containsKey(k)) {
                     out.put(k, index.get(k).vector());
+                }
+            });
+            return out;
+        }
+
+        @Override
+        public Map<String, Map<String, Object>> metadata(List<String> keys) {
+            Map<String, Map<String, Object>> out = new HashMap<>();
+            keys.forEach(k -> {
+                if (index.containsKey(k)) {
+                    out.put(k, index.get(k).metadata());
                 }
             });
             return out;

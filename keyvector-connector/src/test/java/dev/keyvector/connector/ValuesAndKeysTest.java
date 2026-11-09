@@ -92,4 +92,23 @@ class ValuesAndKeysTest {
         assertThrows(RowKey.KeyTooLongException.class, () -> RowKey.encode(Map.of("id", "x".repeat(1100))));
         assertThrows(IllegalArgumentException.class, () -> RowKey.decode("not-a-key"));
     }
+
+    @Test
+    void chunkKeysRoundTripToTheirRow() {
+        String row = dev.keyvector.connector.model.RowKey.encode(java.util.Map.of("studio", "A#B & C", "id", 7L));
+        assertFalse(row.contains("#"), "a '#' inside a value is percent-encoded, so it can separate chunks");
+        String k = dev.keyvector.connector.model.RowKey.chunkKey(row, 12);
+        assertEquals(row, dev.keyvector.connector.model.RowKey.rowOf(k));
+        assertEquals(12, dev.keyvector.connector.model.RowKey.chunkOf(k));
+        assertEquals(-1, dev.keyvector.connector.model.RowKey.chunkOf(row));
+        assertEquals("A#B & C", dev.keyvector.connector.model.RowKey.decode(k).get("studio"));
+    }
+
+    @Test
+    void aKeyLeavesRoomForItsChunkNumber() {
+        String v = "x".repeat(1020);
+        dev.keyvector.connector.model.RowKey.encode(java.util.Map.of("k", v));
+        assertThrows(IllegalArgumentException.class,
+            () -> dev.keyvector.connector.model.RowKey.encode(java.util.Map.of("k", v), 3));
+    }
 }
