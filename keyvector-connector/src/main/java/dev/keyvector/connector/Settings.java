@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.typesafe.config.Config;
 
+import dev.keyvector.connector.model.Chunker;
 import dev.keyvector.connector.model.MetadataMapper;
 import dev.keyvector.connector.model.Planner;
 import dev.keyvector.connector.model.TextTemplate;
@@ -45,7 +46,15 @@ public record Settings(
     int threads,
     String sinkType,
     String vectorBucket,
-    String vectorIndex) {
+    String vectorIndex,
+    int chunkWords,
+    int chunkOverlapWords,
+    int maxChunks,
+    String rerankModel,
+    String rerankModelPath,
+    String rerankRevision,
+    int rerankCandidates,
+    int rerankMaxTokens) {
 
     public static Settings from(Config c) {
         String region = getConfigValue(c, "keyvector.stream.region", "", true);
@@ -78,13 +87,44 @@ public record Settings(
             getConfigValue(c, "keyvector.embedder.threads", 0, false),
             getConfigValue(c, "keyvector.sink.type", "s3vectors", false).trim().toLowerCase(),
             getConfigValue(c, "keyvector.sink.vector-bucket", "", true),
-            getConfigValue(c, "keyvector.sink.vector-index", "", true));
+            getConfigValue(c, "keyvector.sink.vector-index", "", true),
+            getConfigValue(c, "keyvector.sync.chunk-words", 0, false),
+            getConfigValue(c, "keyvector.sync.chunk-overlap-words", -1, false),
+            getConfigValue(c, "keyvector.sync.max-chunks", 100, false),
+            getConfigValue(c, "keyvector.rerank.model", "", false),
+            getConfigValue(c, "keyvector.rerank.model-path", "", false),
+            getConfigValue(c, "keyvector.rerank.model-revision", "main", false),
+            getConfigValue(c, "keyvector.rerank.candidates", 50, false),
+            getConfigValue(c, "keyvector.rerank.max-tokens", 0, false));
     }
 
     public Planner planner() {
+        Chunker chunker = chunker();
+        MetadataMapper metadata = new MetadataMapper(metadataColumns, storeTextAs);
+        if (chunker != null) {
+            for (String reserved : new String[] {SyncEngine.CHUNK, SyncEngine.CHUNKS}) {
+                if (metadata.columns().contains(reserved) || reserved.equals(metadata.textKey())) {
+                    throw new IllegalArgumentException(reserved + " is used by Keyvector for chunk numbers; rename the metadata key");
+                }
+            }
+        }
         return new Planner(
             TextTemplate.of(textColumns, textTemplate, maxTextChars),
-            new MetadataMapper(metadataColumns, storeTextAs),
-            onEmptyText);
+            metadata,
+            onEmptyText,
+            chunker == null ? 0 : chunker.keySuffixLength());
+    }
+
+    /** Null when chunking is off ({@code sync.chunk-words} is 0). */
+    public Chunker chunker() {
+        if (chunkWords <= 0) {
+            return null;
+        }
+        int overlap = chunkOverlapWords >= 0 ? chunkOverlapWords : chunkWords / 5;
+        return new Chunker(chunkWords, overlap, maxChunks);
+    }
+
+    public boolean reranks() {
+        return !rerankModel.isBlank() || !rerankModelPath.isBlank();
     }
 }

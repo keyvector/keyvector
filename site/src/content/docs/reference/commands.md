@@ -15,8 +15,8 @@ The config file defaults to `$APPLICATION_CONF_LOCATION`, then `./keyvector.conf
 | `backfill [--page-size N] [--batch-size N] [--limit N] [--skip-existing]` | Index the rows the table already had. |
 | `resync KEY [KEY...]` | Re-read these rows and fix their vectors, or delete them if the row is gone. |
 | `redrive [--queue-url URL]` | Resync every row parked in the dead-letter queue. |
-| `query TEXT [--top-k N] [--filter JSON] [--no-rows]` | Semantic search; one JSON line per hit. |
+| `query TEXT [--top-k N] [--filter JSON] [--no-rows] [--no-rerank]` | Semantic search; one JSON line per hit. With `rerank.model` set, results are reranked unless `--no-rerank`. |
 | `check` | Validate the configuration against AWS without writing anything. |
-| `fetch-model REPO [--revision R] [--onnx-file F]` | Download a model for `embedder.type = "local"` into the cache. Needs no config; the Dockerfile uses it to bake a model into the image. |
+| `fetch-model REPO [--revision R] [--onnx-file F] [--reranker]` | Download a model for `embedder.type = "local"` (or, with `--reranker`, for `rerank.model`) into the cache. Needs no config; the Dockerfile uses it to bake a model into the image. |
 
 `run` serves `GET /health` on port 8081 (`HEALTH_PORT`) for container health checks.

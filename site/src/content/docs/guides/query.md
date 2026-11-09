@@ -10,7 +10,10 @@ keyvector query "astronauts stranded in space" --no-rows   # keys and metadata o
 ```
 
 Each hit is one JSON line: the key, the distance, the stored metadata and the row as Keyspaces
-holds it now. A hit whose row has since been deleted is dropped.
+holds it now. A hit whose row has since been deleted is dropped. With
+[chunking](/guides/long-text/), each row appears once with the `chunk` that matched; with a
+[reranker](/guides/long-text/#reranking), each hit also has a `score` and results are in score
+order.
 
 ## Filters
 

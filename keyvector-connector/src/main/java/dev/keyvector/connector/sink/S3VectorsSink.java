@@ -76,6 +76,18 @@ public final class S3VectorsSink implements VectorSink {
     }
 
     @Override
+    public Map<String, Map<String, Object>> metadata(List<String> keys) {
+        Map<String, Map<String, Object>> out = new HashMap<>();
+        for (List<String> part : partition(keys, MAX_GET)) {
+            for (GetOutputVector v : client.getVectors(GetVectorsRequest.builder()
+                    .vectorBucketName(bucket).indexName(index).keys(part).returnData(false).returnMetadata(true).build()).vectors()) {
+                out.put(v.key(), Documents.toMap(v.metadata()));
+            }
+        }
+        return out;
+    }
+
+    @Override
     public List<Hit> query(float[] vector, int topK, Map<String, Object> filter) {
         QueryVectorsRequest.Builder b = QueryVectorsRequest.builder()
             .vectorBucketName(bucket)

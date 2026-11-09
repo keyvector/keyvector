@@ -8,7 +8,7 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label: {default: Source table}
-        Parameters: [KeyspaceName, TableName, TextColumns, MetadataColumns, StoreTextAs]
+        Parameters: [KeyspaceName, TableName, TextColumns, MetadataColumns, StoreTextAs, ChunkWords, MaxTextChars]
       - Label: {default: Embeddings}
         Parameters: [Embedder, EmbedderModel, ModelRevision, Dimensions, TeiImage, EmbedderUrl, ApiKeySecretArn]
       - Label: {default: Vector index}
@@ -33,6 +33,16 @@ Parameters:
     Type: String
     Default: ''
     Description: Also store the embedded text under this metadata key (made non-filterable). Optional.
+  ChunkWords:
+    Type: Number
+    Default: 0
+    MinValue: 0
+    Description: Split long text into chunks of about this many words, one vector each. 0 stores one vector per row.
+  MaxTextChars:
+    Type: Number
+    Default: 8000
+    MinValue: 100
+    Description: Text beyond this many characters is not indexed. Raise it with ChunkWords for long documents.
 
   Embedder:
     Type: String
@@ -296,6 +306,8 @@ Resources:
             - {Name: SYNC_TEXT_COLUMNS, Value: !Ref TextColumns}
             - {Name: SYNC_METADATA_COLUMNS, Value: !Ref MetadataColumns}
             - {Name: SYNC_STORE_TEXT_AS, Value: !Ref StoreTextAs}
+            - {Name: SYNC_CHUNK_WORDS, Value: !Ref ChunkWords}
+            - {Name: SYNC_MAX_TEXT_CHARS, Value: !Ref MaxTextChars}
             - {Name: EMBEDDER_TYPE, Value: !Ref Embedder}
             - {Name: EMBEDDER_MODEL, Value: !Ref EmbedderModel}
             - {Name: EMBEDDER_MODEL_REVISION, Value: !Ref ModelRevision}

@@ -22,8 +22,11 @@ import dev.keyvector.connector.backfill.Resync;
 import dev.keyvector.connector.embed.Embedder;
 import dev.keyvector.connector.embed.Embedders;
 import dev.keyvector.connector.embed.local.LocalEmbedder;
+import dev.keyvector.connector.embed.local.LocalReranker;
 import dev.keyvector.connector.embed.local.ModelFiles;
+import dev.keyvector.connector.model.Planner;
 import dev.keyvector.connector.query.KeyvectorQuery;
+import dev.keyvector.connector.query.Reranker;
 import dev.keyvector.connector.sink.Sinks;
 import dev.keyvector.connector.sink.VectorSink;
 import dev.keyvector.core.config.KeyspacesConfig;
@@ -53,9 +56,11 @@ public final class Main {
         "      --top-k N               results (default 10, at most 100)",
         "      --filter JSON           S3 Vectors metadata filter, e.g. '{\"genre\":\"drama\"}'",
         "      --no-rows               return keys and metadata without reading Keyspaces",
+        "      --no-rerank             rank by vector distance even when rerank.model is set",
         "  check                     Validate the configuration against AWS without writing anything",
         "  fetch-model REPO          Download a Hugging Face model for embedder.type = local into the cache",
         "      --revision R            commit hash or branch (default main; pin a hash in production)",
+        "      --reranker              the repo is a reranker (rerank.model), not an embedding model",
         "",
         "The config file defaults to $APPLICATION_CONF_LOCATION, then ./keyvector.conf.");
 
@@ -74,7 +79,7 @@ public final class Main {
                 throw new IllegalArgumentException("fetch-model needs one Hugging Face repo id");
             }
             ModelFiles files = ModelFiles.hub(args.positional.get(0), args.get("revision", "main"), ModelFiles.defaultCacheRoot());
-            Path onnx = LocalEmbedder.prefetch(files, args.get("onnx-file", ""));
+            Path onnx = args.has("reranker") ? LocalReranker.prefetch(files) : LocalEmbedder.prefetch(files, args.get("onnx-file", ""));
             System.out.println("Cached " + files.describe() + " (" + onnx.getFileName() + ") under " + ModelFiles.defaultCacheRoot());
             return;
         }
@@ -134,7 +139,7 @@ public final class Main {
             CqlSession session = config.getOrCreateCqlSession();
             try {
                 KeyspacesRows rows = new KeyspacesRows(session, settings.keyspace(), settings.table());
-                task.accept(rows, new SyncEngine(settings.planner(), embedder, sink), sink, embedder);
+                task.accept(rows, new SyncEngine(settings.planner(), embedder, sink, settings.chunker()), sink, embedder);
             } finally {
                 session.close();
             }
@@ -147,14 +152,24 @@ public final class Main {
             throw new IllegalArgumentException("query needs some text");
         }
         Map<String, Object> filter = args.has("filter") ? Json.readMap(args.get("filter", "{}")) : null;
+        Reranker reranker = args.has("no-rerank") ? null : Embedders.reranker(settings);
         try (Embedder embedder = Embedders.create(settings); VectorSink sink = Sinks.create(settings)) {
             CqlSession session = args.has("no-rows") ? null : config.getOrCreateCqlSession();
             try {
                 KeyspacesRows rows = session == null ? null : new KeyspacesRows(session, settings.keyspace(), settings.table());
-                for (KeyvectorQuery.Result r : new KeyvectorQuery(embedder, sink, rows).search(text, args.getInt("top-k", 10), filter)) {
+                Planner planner = settings.planner();
+                KeyvectorQuery q = new KeyvectorQuery(embedder, sink, rows == null ? null : rows::fetch,
+                    planner.text(), settings.chunker(), planner.metadata().textKey(), reranker, settings.rerankCandidates());
+                for (KeyvectorQuery.Result r : q.search(text, args.getInt("top-k", 10), filter)) {
                     Map<String, Object> line = new LinkedHashMap<>();
                     line.put("key", r.key());
+                    if (r.chunk() != null) {
+                        line.put("chunk", r.chunk());
+                    }
                     line.put("distance", r.distance());
+                    if (r.score() != null) {
+                        line.put("score", r.score());
+                    }
                     line.put("metadata", r.metadata());
                     if (r.row() != null) {
                         line.put("row", r.row());
@@ -164,6 +179,9 @@ public final class Main {
             } finally {
                 if (session != null) {
                     session.close();
+                }
+                if (reranker != null) {
+                    reranker.close();
                 }
             }
         }

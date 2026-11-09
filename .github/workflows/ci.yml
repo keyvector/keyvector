@@ -18,7 +18,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/keyvector/models
-          key: models-minilm-1110a24-bge-5c38ec7
+          key: models-minilm-1110a24-bge-5c38ec7-rerank-233902d
       - run: mvn -B -Dspotbugs.skip=true verify
         env:
           KEYVECTOR_MODEL_TESTS: '1'

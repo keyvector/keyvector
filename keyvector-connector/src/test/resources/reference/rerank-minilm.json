@@ -1,0 +1,64 @@
+{
+ "model": "cross-encoder/ms-marco-MiniLM-L6-v2",
+ "revision": "233902d25c440f23af6f7d6e94d2946bac0bee0a",
+ "source": "text-embeddings-inference cpu-1.8 /rerank raw_scores=true",
+ "texts": [
+  "Astronauts are stranded on a failing space station far from Earth and must improvise a way home.",
+  "A grandmother teaches her grandson the family recipes before the restaurant closes forever.",
+  "Gravitational waves from merging black holes were first detected by LIGO in 2015.",
+  "The bakery opens at seven and sells sourdough until it runs out.",
+  "Astronauts are stranded on a failing space station far from Earth.",
+  "A grandmother teaches her grandson the family recipes before the restaurant closes.",
+  "Café crème brûlée, naïve façade – déjà vu? ¿Qué tal? 😀",
+  "向量搜索让应用能够按含义查找数据。",
+  "x",
+  "The reactor cooled slowly while the crew argued about the failing navigation system and the dwindling oxygen reserves aboard the station. The reactor cooled slowly while the crew argued about the failing navigation system and the dwindling oxygen reserves aboard the station. The reactor cooled slowly while the crew argued about the failing navigation system and the dwindling oxygen reserves aboard the station. The reactor cooled slowly while the crew argued about the failing navigation system and the dwindling oxygen reserves aboard the station. The reactor cooled slowly while the crew argued about the failing navigation system and the dwindling oxygen reserves aboard the station. The reactor cooled slowly while the crew argued about the failing navigation system and the dwindling oxygen reserves aboard the station. The reactor cooled slowly while the crew argued about the failing navigation system and the dwindling oxygen reserves aboard the station. The reactor cooled slowly while the crew argued about the failing navigation system and the dwindling oxygen reserves aboard the station. The reactor cooled slowly while the crew argued about the failing navigation system and the dwindling oxygen reserves aboard the station. The reactor cooled slowly while the crew argued about the failing navigation system and the dwindling oxygen reserves aboard the station. The reactor cooled slowly while the crew argued about the failing navigation system and the dwindling oxygen reserves aboard the station. The reactor cooled slowly while the crew argued about the failing navigation system and the dwindling oxygen reserves aboard the station."
+ ],
+ "queries": [
+  {
+   "query": "astronauts stranded in space",
+   "scores": [
+    8.725782,
+    -11.218057,
+    -11.2491665,
+    -11.053938,
+    8.89592,
+    -11.214948,
+    -11.225515,
+    -10.920774,
+    -10.183133,
+    -10.420967
+   ]
+  },
+  {
+   "query": "how were gravitational waves first detected?",
+   "scores": [
+    -11.272202,
+    -11.263662,
+    8.03479,
+    -11.191356,
+    -11.285838,
+    -11.266447,
+    -11.274095,
+    -10.575896,
+    -10.196441,
+    -10.940437
+   ]
+  },
+  {
+   "query": "family cooking traditions",
+   "scores": [
+    -11.159072,
+    -4.061312,
+    -11.057081,
+    -11.219727,
+    -11.119282,
+    -3.867799,
+    -11.174742,
+    -10.301984,
+    -10.112295,
+    -10.945364
+   ]
+  }
+ ]
+}

@@ -81,6 +81,10 @@ roadmap).
   process with ONNX Runtime: no model server, no API key, no per-token cost, and text that never
   leaves the process. Or use Hugging Face TEI, Amazon Bedrock (Titan, Cohere), or any
   OpenAI-compatible `/embeddings` endpoint.
+- **Long text and reranking.** `sync.chunk-words` splits long rows into overlapping chunks, one
+  vector each, and removes a row's stale chunks when its text shrinks. `rerank.model` re-scores
+  query results with a cross-encoder, in process, matching Hugging Face TEI's scores. See
+  [Long text and reranking](https://keyvector.dev/guides/long-text/).
 - **Least-privilege by construction.** The CloudFormation template grants read on one table
   and its stream, the connector's own lease tables, one vector index and one queue.
 
@@ -124,9 +128,9 @@ with the model in the same task when `Embedder` is `tei`. See [deploy/README.md]
 | `backfill [--skip-existing] [--limit N]` | Index the rows the table already had. Run it after `run` is up. |
 | `resync KEY...` | Re-read named rows from Keyspaces and fix their vectors (or delete them if the row is gone). |
 | `redrive [--queue-url U]` | Resync every row parked in the dead-letter queue. |
-| `query TEXT [--top-k N] [--filter JSON] [--no-rows]` | Semantic search; one JSON line per hit, with the current row. |
+| `query TEXT [--top-k N] [--filter JSON] [--no-rows] [--no-rerank]` | Semantic search; one JSON line per hit, with the current row. Reranked when `rerank.model` is set. |
 | `check` | Validate the configuration against AWS without writing anything. |
-| `fetch-model REPO [--revision R]` | Download a model for `embedder.type = "local"` into the cache (used to bake it into an image). |
+| `fetch-model REPO [--revision R] [--reranker]` | Download a model for `embedder.type = "local"` (or a `rerank.model`) into the cache (used to bake it into an image). |
 
 ## Configuration
 
@@ -175,16 +179,17 @@ settings that matter:
 ## Roadmap
 
 - OpenSearch Service and DynamoDB (native vector search) as sinks
-- Chunking long text into several vectors per row
 - `keyvector verify`: sample the table and the index and report drift
 - Zero-downtime model migration (dual-write to a new index, then cut over)
 - CloudWatch metrics and alarms: lag, embedded/skipped/dead-lettered counts
-- Other sources with change streams: DynamoDB Streams, Cassandra 5 CDC
+- Open-source Cassandra 5: Debezium's change topic in, a companion table with Cassandra's own vector index out
+- Hybrid keyword and vector search
+- Other sources with change streams: DynamoDB Streams
 
 ## Project status
 
 Pre-release (0.1). The unit tests cover the sync rules, key encoding, the embedders and the
-retry and dead-letter behaviour (`mvn test`, 223 tests).
+retry and dead-letter behaviour, chunking and reranking (`mvn test`, 259 tests).
 
 **Tested end to end against live AWS on 2 November 2026** (Keyspaces CDC in us-east-1,
 S3 Vectors, Bedrock Titan V2 and a local TEI with all-MiniLM-L6-v2), with the kit in
