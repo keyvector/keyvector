@@ -208,6 +208,10 @@ S3 Vectors, Bedrock Titan V2 and a local TEI with all-MiniLM-L6-v2), with the ki
 model server): 302 rows backfilled in 17 seconds, the same 61-change split, exactly 5 changes
 after a restart, and every test query's target first.
 
+**Chunking and reranking, 9 November 2026:** 302 rows became exactly the predicted 914 chunk
+vectors; live changes, shortened texts, deletes and a restart left exactly the predicted chunks
+(942) with none stale; reranked queries put every target first.
+
 Not yet tested live: the Fargate deployment (`deploy/keyvector.yaml`), the dead-letter queue
 and redrive, and TTL expiry.
 

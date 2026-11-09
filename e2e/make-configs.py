@@ -46,4 +46,17 @@ conf("local.conf", "keyvector-e2e-local", """  embedder {
     batch-size = 32
     normalize = true
   }""", "movies-minilm")
-print("wrote e2e/titan.conf, e2e/minilm.conf and e2e/local.conf")
+# Chunking and reranking: the local embedder with 10-word chunks, so every row spans several
+# chunks, and a cross-encoder for queries. Check with `e2e.py verify-chunks movies-minilm 10 2`.
+s = (here / "local.conf").read_text()
+s = s.replace('application-name = "keyvector-e2e-local"', 'application-name = "keyvector-e2e-chunked"')
+s = s.replace("    chunk-words = 0\n", "    chunk-words = 10\n    chunk-overlap-words = 2\n", 1)
+s = s.replace("  sink {", """  rerank {
+    model = "cross-encoder/ms-marco-MiniLM-L6-v2"
+    model-revision = "233902d25c440f23af6f7d6e94d2946bac0bee0a"
+    candidates = 50
+  }
+
+  sink {""", 1)
+(here / "chunked.conf").write_text(s)
+print("wrote e2e/titan.conf, e2e/minilm.conf, e2e/local.conf and e2e/chunked.conf")

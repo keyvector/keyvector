@@ -14,6 +14,7 @@ Uses the AWS profile in KEYVECTOR_PROFILE (default "keyvector").
 import json
 import os
 import random
+import re
 import ssl
 import sys
 import time
@@ -228,6 +229,69 @@ def verify(s, index, snapshot_path=None):
     return not failures
 
 
+def chunk_count(text, max_words, overlap, max_chunks=100):
+    """How many chunks Keyvector's Chunker makes of a text: an independent port, to check the Java."""
+    words = lambda t: t.strip().split()
+    if not text or not text.strip():
+        return 0
+    if len(words(text)) <= max_words:
+        return 1
+    pieces = []
+    for sentence in re.split(r"(?<=[.!?])\s+|\n\s*\n", text.strip()):
+        w = words(sentence)
+        step = max_words - overlap
+        pieces += [w[i:i + step] for i in range(0, len(w), step)]
+    chunks, current, fresh = 0, [], 0
+    for piece in pieces:
+        if fresh > 0 and len(current) + len(piece) > max_words:
+            chunks += 1
+            if chunks == max_chunks:
+                return chunks
+            current = current[len(current) - overlap:] if overlap else []
+            while current and len(current) + len(piece) > max_words:
+                current.pop(0)
+            fresh = 0
+        current += piece
+        fresh += len(piece)
+    return chunks + (1 if fresh > 0 else 0)
+
+
+def verify_chunks(s, index, max_words, overlap):
+    """Every row with text has exactly chunks #0..#n-1, n is on every chunk and matches the text, nothing else."""
+    rows = {key(r.studio, r.movie_id): r for r in s.execute(f"SELECT studio, movie_id, title, overview, genre FROM {TABLE}")}
+    vectors = all_vectors(index)
+    by_row = {}
+    failures = []
+    for k, meta in vectors.items():
+        if "#" not in k:
+            failures.append(f"unchunked key {k}")
+            continue
+        row, n = k.rsplit("#", 1)
+        by_row.setdefault(row, {})[int(n)] = meta
+    total_expected = 0
+    for k, r in rows.items():
+        text = "\n\n".join(t.strip() for t in [r.title or "", r.overview or ""] if t.strip())
+        want = chunk_count(text, max_words, overlap)
+        total_expected += want
+        got = by_row.pop(k, {})
+        if sorted(got) != list(range(want)):
+            failures.append(f"{k}: chunks {sorted(got)}, expected 0..{want - 1}")
+            continue
+        for n, meta in got.items():
+            if meta.get("kv_chunks") != want or meta.get("kv_chunk") != n:
+                failures.append(f"{k}#{n}: kv_chunk {meta.get('kv_chunk')} kv_chunks {meta.get('kv_chunks')}, expected {n} of {want}")
+            if meta.get("genre") != r.genre:
+                failures.append(f"{k}#{n}: stale genre {meta.get('genre')}")
+    for row, got in by_row.items():
+        failures.append(f"{len(got)} chunks for a row that is gone: {row}")
+    multi = sum(1 for k in rows if len(vectors) and f"{k}#1" in vectors)
+    print(json.dumps({"index": index, "rows": len(rows), "vectors": len(vectors), "expected_vectors": total_expected,
+                      "rows_with_several_chunks": multi, "problems": len(failures), "ok": not failures}, indent=2))
+    for f in failures[:20]:
+        print("FAIL", f)
+    return not failures
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "snapshot":
@@ -242,6 +306,9 @@ if __name__ == "__main__":
         mutate_offline(s)
     elif cmd == "mutate-retry":
         mutate_retry(s)
+    elif cmd == "verify-chunks":
+        # verify-chunks INDEX CHUNK_WORDS OVERLAP
+        sys.exit(0 if verify_chunks(s, sys.argv[2], int(sys.argv[3]), int(sys.argv[4])) else 1)
     elif cmd == "verify":
         snap = sys.argv[sys.argv.index("--snapshot") + 1] if "--snapshot" in sys.argv else None
         sys.exit(0 if verify(s, sys.argv[2], snap) else 1)

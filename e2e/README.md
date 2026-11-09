@@ -9,7 +9,7 @@ it KCL's one-time 12-minute wait per connector. Everything it creates is deleted
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r e2e/requirements.txt   # boto3[crt] is needed for `aws login` credentials
 mvn -q -DskipTests package
-python3 e2e/make-configs.py <account-id>        # writes e2e/titan.conf, minilm.conf and local.conf
+python3 e2e/make-configs.py <account-id>        # writes e2e/titan.conf, minilm.conf, local.conf and chunked.conf
 ```
 
 Create the stack with CDC **off** (`e2e/stack.yaml`, stack name `keyvector-e2e`), so rows can
@@ -35,7 +35,14 @@ Indexes: `movies-minilm` (TEI, `all-MiniLM-L6-v2`, 384 dimensions) and `movies-t
 `local.conf` runs the same steps with the in-process embedder, writing to `movies-minilm` (same
 model, identical vectors); skip step 7, since there is no model server to stop.
 
+`chunked.conf` tests chunking and reranking: 10-word chunks, so every row spans several, and a
+cross-encoder for queries. Run steps 1–6 with it, but check the index with
+`e2e.py verify-chunks movies-minilm 10 2` instead of `verify`. That checks every row holds exactly
+chunks `#0` to `#n-1`, that `n` is stored on each chunk and equals what an independent port of the
+chunker predicts, and that no chunk survives its row. To test stale-chunk removal, shorten a few
+overviews after `mutate`.
+
 ## Clean up
 
 Delete the `keyvector-e2e` stack, then the six tables KCL created:
-`keyvector-e2e-{minilm,titan,local}-lease-table`, `...-CoordinatorState` and `...-WorkerMetricStats`.
+`keyvector-e2e-{minilm,titan,local,chunked}-lease-table`, `...-CoordinatorState` and `...-WorkerMetricStats`.

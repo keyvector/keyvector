@@ -46,7 +46,9 @@ The sync rules stay the same, per row:
 - **Row deleted or expired:** every chunk is deleted.
 
 Chunk 0 is deleted last and written last. A batch that fails halfway therefore leaves a count that
-still covers every chunk, and the retry finishes the job. The tests replay exactly that case.
+still covers every chunk, and the retry finishes the job. The tests replay exactly that case,
+and a [live run against AWS](/project/status/) checked every row's chunks after backfill,
+live changes, shortened texts, deletes and a restart.
 
 ### Turning it on for an existing index
 

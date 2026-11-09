@@ -50,6 +50,20 @@ all-MiniLM-L6-v2 running inside the connector on a laptop.
 [What Keyvector creates in your AWS account](/notes/what-keyvector-creates-in-your-aws-account/)
 shows this run in the AWS console.
 
+## Chunking and reranking against live AWS (9 November 2026)
+
+The same kit with `e2e/chunked.conf`: 10-word chunks, so every row spans several, and the
+ms-marco-MiniLM cross-encoder for queries. `e2e.py verify-chunks` checks every row holds exactly
+chunks `#0` to `#n-1`, with `n` equal to what an independent Python port of the chunker predicts.
+
+| Step | Result |
+|---|---|
+| `keyvector check` | All six checks passed, including loading the reranker |
+| Backfill | 302 rows became exactly the predicted 914 chunk vectors |
+| 61 live changes, plus 5 overviews cut to one word | 36 rows re-embedded (97 chunks), 10 reused, 10 unchanged, 10 deleted with every chunk; the 5 shortened rows lost their extra chunks; 936 vectors, as predicted |
+| Stop, change 5 rows, restart | Exactly those 5 applied; 942 vectors, as predicted |
+| Reranked queries | Each test query's target first, including one that only arrived through the stream; the target scored 3.4 where the next result scored −11 |
+
 ## Not yet tested live
 
 - The Fargate deployment template (`deploy/keyvector.yaml`)
