@@ -21,12 +21,22 @@ import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
 ```text
  Keyspaces table ──change stream──▶ keyvector ──▶ embed ──▶ S3 Vectors index
                                                    │
-                         your Sentence-Transformers model (TEI), Bedrock, or any OpenAI-compatible API
+                  a Sentence-Transformers model run in process, TEI, Bedrock, or an OpenAI-compatible API
 
  keyvector query "…" ──▶ embed ──▶ nearest rows ──▶ read them back from Keyspaces ──▶ current results
 ```
 
 </div>
+
+## What's new
+
+<CardGrid>
+	<LinkCard title="Security update: no known vulnerabilities" description="9 Nov · Every shipped library checked; 31 vulnerable dependencies updated or removed, and the jar is 37 MB smaller." href="/project/whats-new/#9-november-2026-dependency-security-update" />
+	<LinkCard title="Chunking and reranking" description="9 Nov · Search long text all the way through, and rerank results with a cross-encoder run inside Keyvector." href="/guides/long-text/" />
+	<LinkCard title="Embeddings without a model server" description="3 Nov · Run a Sentence-Transformers model inside Keyvector, with vectors identical to Hugging Face's own." href="/notes/embeddings-without-a-model-server/" />
+</CardGrid>
+
+[All updates →](/project/whats-new/)
 
 ## Why teams use it
 

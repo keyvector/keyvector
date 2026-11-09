@@ -61,6 +61,7 @@ export default defineConfig({
 				{
 					label: 'Project',
 					items: [
+						{ label: "What's new", slug: 'project/whats-new' },
 						{ label: 'Status and testing', slug: 'project/status' },
 						{ label: 'Roadmap', slug: 'project/roadmap' },
 						{ label: 'Contributing', slug: 'project/contributing' },
