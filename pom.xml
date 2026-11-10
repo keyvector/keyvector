@@ -31,14 +31,56 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kcl.version>3.1.2</kcl.version>
         <aws.sdk.version>2.46.7</aws.sdk.version>
-        <slf4j.version>1.7.36</slf4j.version>
-        <logback.version>1.2.12</logback.version>
+        <slf4j.version>2.0.20</slf4j.version>
+        <logback.version>1.5.38</logback.version>
         <onnxruntime.version>1.31.1</onnxruntime.version>
+        <!-- One Jackson version for everything, including what libraries pull in transitively. -->
+        <jackson.version>2.22.4</jackson.version>
+        <!-- Transitive versions pinned past known vulnerabilities (Netty, Guava, Apache HttpClient). -->
+        <netty.version>4.1.140.Final</netty.version>
+        <guava.version>33.8.0-jre</guava.version>
+        <httpclient5.version>5.6.5</httpclient5.version>
+        <httpcore5.version>5.4.4</httpcore5.version>
         <djl.tokenizers.version>0.40.0</djl.tokenizers.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- Before the AWS SDK's BOM, so these versions win. -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-bom</artifactId>
+                <version>${netty.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents.client5</groupId>
+                <artifactId>httpclient5</artifactId>
+                <version>${httpclient5.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents.core5</groupId>
+                <artifactId>httpcore5</artifactId>
+                <version>${httpcore5.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents.core5</groupId>
+                <artifactId>httpcore5-h2</artifactId>
+                <version>${httpcore5.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>bom</artifactId>

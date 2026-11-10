@@ -40,6 +40,14 @@
             <groupId>software.amazon.kinesis</groupId>
             <artifactId>amazon-kinesis-client</artifactId>
             <version>${kcl.version}</version>
+            <exclusions>
+                <!-- Glue Schema Registry decoding is used only when a deserializer is configured,
+                     which Keyvector never does; it brought Kafka, LZ4, Snappy and Wire along. -->
+                <exclusion>
+                    <groupId>software.amazon.glue</groupId>
+                    <artifactId>schema-registry-serde</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         
         <dependency>
@@ -52,6 +60,14 @@
             <groupId>software.aws.mcs</groupId>
             <artifactId>aws-sigv4-auth-cassandra-java-driver-plugin</artifactId>
             <version>4.0.9</version>
+            <exclusions>
+                <!-- Only for DataStax Enterprise geospatial types, which Keyspaces doesn't have; it
+                     brought org.json (2009) and Jackson 1.x. The driver made it optional in 4.14. -->
+                <exclusion>
+                    <groupId>com.esri.geometry</groupId>
+                    <artifactId>esri-geometry-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- AWS SDK Core -->
@@ -97,6 +113,12 @@
             <version>${aws.sdk.version}</version>
         </dependency>
 
+        <!-- AWSHelpers names each worker from STS. It used to arrive only through KCL's Glue Schema
+             Registry module (excluded above), so it is declared here. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sts</artifactId>
+        </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>keyspaces</artifactId>
@@ -106,18 +128,14 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>2.15.2</version>
         </dependency>
          <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.15.2</version>
         </dependency>
          <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
-            <version>2.15.2</version>
-            
         </dependency>
         <!-- Logging -->
         <dependency>
